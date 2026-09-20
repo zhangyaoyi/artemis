@@ -60,6 +60,7 @@ from artemis.config import (
     settings,
 )
 from artemis.constants import RECURSION_LIMIT
+from artemis.core.device_unlock import unlock_with_pin
 from artemis.context import (
     ArtemisContext,
     DeviceContext,
@@ -1008,6 +1009,11 @@ class Agent:
         value = match.group(0).split("=", 1)[1].lower()
         if value in {"true", "1"}:
             if settings.ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION:
+                if settings.ARTEMIS_DEVICE_UNLOCK_PIN:
+                    await asyncio.to_thread(
+                        unlock_with_pin, device, settings.ARTEMIS_DEVICE_UNLOCK_PIN
+                    )
+                    return
                 logger.warning(
                     "Android secure keyguard is locked; continuing because "
                     "ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION is enabled."

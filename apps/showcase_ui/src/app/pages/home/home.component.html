@@ -1708,12 +1708,8 @@
         <!-- Prerequisites Drop Alert if any blocker probe is not passing -->
         @if (hasReadinessReport() && !isReady()) {
           <div class="launcher-warning-bar" (click)="setTab('diagnostics')">
-            <span class="material-symbols-outlined warn-icon">{{ adbProbe()?.summary === 'Device Locked' ? 'lock' : 'warning' }}</span>
-            <span>
-              {{ adbProbe()?.summary === 'Device Locked'
-                ? 'Android device is locked. Unlock it and enter the home screen before running a task.'
-                : 'Prerequisites incomplete: runtime, credentials, or Android device is not ready. Click here to open Setup Guide.' }}
-            </span>
+            <span class="material-symbols-outlined warn-icon">warning</span>
+            <span>Prerequisites incomplete: runtime, credentials, or Android device is not ready. Click here to open Setup Guide.</span>
             <span class="material-symbols-outlined arrow">arrow_forward</span>
           </div>
         }
@@ -1821,7 +1817,7 @@
                 class="btn-run-composer"
                 [class.btn-run-pro]="selectedProfile() === 'pro'"
                 [disabled]="!taskGoal().trim() || isSubmitting() || !isReady()"
-                [title]="!isReady() ? (adbProbe()?.summary === 'Device Locked' ? 'Unlock the Android device before running' : 'Complete System Setup before running') : 'Run task'"
+                [title]="!isReady() ? 'Complete System Setup before running' : 'Run task'"
                 (click)="runTask()"
               >
                 @if (isSubmitting()) {

@@ -85,7 +85,8 @@ export class SystemService {
 
   public isDeviceReady = computed(() => {
     const adb = this.adbProbe();
-    return adb?.status === 'pass';
+    // A locked screen is not a blocker: the agent unlocks it with the configured PIN.
+    return adb?.status === 'pass' || adb?.summary === 'Device Locked';
   });
 
   // Step-level counting matching the 3-step onboarding guide

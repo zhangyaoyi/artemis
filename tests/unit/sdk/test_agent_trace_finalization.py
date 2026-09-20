@@ -112,8 +112,50 @@ async def test_secure_keyguard_is_allowed_with_explicit_opt_in(monkeypatch):
         'User "Owner" (id=0): deviceLocked=1\n'
     )
     monkeypatch.setattr(settings, "ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION", True)
+    monkeypatch.setattr(settings, "ARTEMIS_DEVICE_UNLOCK_PIN", None)
 
     await agent._ensure_device_unlocked()
+
+
+@pytest.mark.asyncio
+async def test_secure_keyguard_is_unlocked_with_configured_pin(monkeypatch):
+    from pydantic import SecretStr
+
+    agent = object.__new__(Agent)
+    agent._device_context = MagicMock(device_id="device-123")
+    agent._adb_client = MagicMock()
+    agent._adb_client.device.return_value.shell.return_value = (
+        'User "Owner" (id=0): deviceLocked=1\n'
+    )
+    monkeypatch.setattr(settings, "ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION", True)
+    monkeypatch.setattr(settings, "ARTEMIS_DEVICE_UNLOCK_PIN", SecretStr("1234"))
+    unlock = MagicMock()
+    monkeypatch.setattr("artemis.sdk.agent.unlock_with_pin", unlock)
+
+    await agent._ensure_device_unlocked()
+
+    unlock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_pin_is_ignored_without_keyguard_opt_in(monkeypatch):
+    from pydantic import SecretStr
+
+    agent = object.__new__(Agent)
+    agent._device_context = MagicMock(device_id="device-123")
+    agent._adb_client = MagicMock()
+    agent._adb_client.device.return_value.shell.return_value = (
+        'User "Owner" (id=0): deviceLocked=1\n'
+    )
+    monkeypatch.setattr(settings, "ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION", False)
+    monkeypatch.setattr(settings, "ARTEMIS_DEVICE_UNLOCK_PIN", SecretStr("1234"))
+    unlock = MagicMock()
+    monkeypatch.setattr("artemis.sdk.agent.unlock_with_pin", unlock)
+
+    with pytest.raises(AgentError, match="Unlock the device manually"):
+        await agent._ensure_device_unlocked()
+
+    unlock.assert_not_called()
 
 
 @pytest.mark.asyncio

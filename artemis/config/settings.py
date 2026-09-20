@@ -123,6 +123,9 @@ class Settings(BaseSettings):
     # Keep disabled by default because task goals and traces may contain device
     # credentials when this mode is used.
     ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION: bool = Field(default=False)
+    # Numeric PIN used to unlock the device over ADB before a task starts.
+    # Only used when ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION is enabled; never logged.
+    ARTEMIS_DEVICE_UNLOCK_PIN: SecretStr | None = Field(default=None)
 
     # Execution Defaults
     PROJECT_NAME: str | None = None
