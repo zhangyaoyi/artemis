@@ -161,16 +161,20 @@ class VisualStepSummarizer(StepMemoryService):
             flush_timeout_s=flush_timeout_s,
         )
 
-        # Initialize lightweight VLM: prioritize explicit model_name
+        # Initialize the summarizer through the configured provider.  Dedicated
+        # model names are still honored for the legacy Google path; local and
+        # OpenAI-compatible providers must use the context router so their
+        # configured endpoint is preserved.
         target_model = model_name or "gemini-2.5-flash-lite"
         self._model_name = target_model
         try:
-            if model_name:
+            summarizer_cfg = ctx.llm_config.get_agent("summarizer")
+            if model_name and str(summarizer_cfg.provider) == "google":
                 self._llm = get_google_llm(model_name=target_model, temperature=0.0)
             else:
-                self._llm = get_llm(ctx, name="summarizer", is_utils=True)
+                self._llm = get_llm(ctx, name="summarizer", temperature=0.0)
         except Exception:
-            self._llm = get_google_llm(model_name=target_model, temperature=0.0)
+            self._llm = get_llm(ctx, name="summarizer", temperature=0.0)
         try:
             configured = getattr(self._llm, "model", None) or getattr(self._llm, "model_name", None)
             if isinstance(configured, str) and configured:

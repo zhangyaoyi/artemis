@@ -7,13 +7,11 @@
   // 1. Global Default Model (Applied to all sub-agents unless overridden below)
   // ------------------------------------------------------------------------------
   "default": {
-    "provider": "google",
-    "model": "gemini-3.8-flash",
-    "thinking_level": "medium",
+    "provider": "custom",
+    "model": "qwen3.8",
     "fallback": {
-      "provider": "google",
-      "model": "gemini-3.7-flash",
-      "thinking_level": "medium"
+      "provider": "custom",
+      "model": "qwen3.8"
     }
   },
 
@@ -41,10 +39,10 @@
       "model": "gemini-3.5-flash-lite",
       "fallback": { "provider": "google", "model": "gemini-3.1-flash-lite" }
     },
-    "local-ollama": {
-      "provider": "openai",
-      "model": "llama3.2-vision",
-      "fallback": { "provider": "openai", "model": "llama3.2-vision" }
+    "local-llama": {
+      "provider": "custom",
+      "model": "qwen3.8",
+      "fallback": { "provider": "custom", "model": "qwen3.8" }
     }
   },
 
@@ -70,21 +68,21 @@
     //  - Universal Multi-Model Engine for Claude 3.5/3.7, GPT-4o, OpenRouter, Vertex AI (dynamic keyframe extraction + multimodal tool calling)
     "video_analyzer": {},
 
-    // 👁️ Object Detector & Explorer (Flash Mode): Visual coordinates grounding and bounding boxes
-    // CRITICAL REQUIREMENT: Standard LLMs (including standard Gemini Flash, GPT-4o, Claude 3.7) lack sub-pixel spatial coordinate fine-tuning.
-    // To achieve accurate [x, y] point and bounding box localization, this node MUST use specialized Gemini ER (Embodied Reasoning / Robotics) models:
-    // e.g., "gemini-robotics-er-2-preview". Non-ER models will fail spatial coordinate detection.
+    // 👁️ Object Detector & Explorer (Flash Mode): Visual coordinates grounding and bounding boxes.
+    // Routed to the local vision-capable Qwen deployment. Coordinate quality depends
+    // on the model's visual grounding performance.
     "object_detector": {
-      "model": "gemini-robotics-er-2-preview",
+      "provider": "custom",
+      "model": "qwen3.8",
       "fallback": {
-        "provider": "google",
-        "model": "gemini-robotics-er-2-preview"
+        "provider": "custom",
+        "model": "qwen3.8"
       }
     },
 
     // 🔍 Explorer: Deep element grounding and multi-candidate visual search
     // NOTE:
-    //  - "flash" version delegates directly to object_detector (requires Gemini ER model above).
+    //  - "flash" version delegates directly to the configured object_detector.
     //  - "pro" / "ultra" versions run multi-turn ReAct loops (supports both Native Gemini and Universal Multi-Model LangChain engines).
     "explorer": {
       "thinking_level": "medium"
@@ -95,10 +93,11 @@
 
     // 🔽 Hopper: Fast lightweight package name locator
     "hopper": {
-      "model": "gemini-3.5-flash-lite",
+      "provider": "custom",
+      "model": "qwen3.8",
       "fallback": {
-        "provider": "google",
-        "model": "gemini-3.1-flash-lite"
+        "provider": "custom",
+        "model": "qwen3.8"
       }
     },
 
@@ -122,10 +121,19 @@
     "checker": {
       "thinking_level": "medium",
       "include_thoughts": true
+    },
+    "validator_pixel_safety_net": {
+      "provider": "custom",
+      "model": "qwen3.8",
+      "fallback": { "provider": "custom", "model": "qwen3.8" }
+    },
+    "planner_validation": {
+      "provider": "custom",
+      "model": "qwen3.8",
+      "fallback": { "provider": "custom", "model": "qwen3.8" }
     }
     // 🎯 Planner Validation: Advisory review of milestone changes.
-    // Defaults to the same lightweight model as the pixel safety net
-    // (gemini-3.5-flash-lite, temperature 0); add "planner_validation": {...} here to override.
+    // Uses the explicit local override above instead of the factory cloud default.
   },
 
   // ------------------------------------------------------------------------------
@@ -145,7 +153,7 @@
       // replacing images only after strictly objective, high-density summaries are ready.
       "step_summarizer": {
         "enabled": true, // Whether background step summarization is active
-        "model": "gemini-3.5-flash-lite", // Lightweight model for fast background inference
+        "model": "qwen3.8", // Local llama-swap model for background inference
         "prune_history_xml": true // Prune outdated heavy XML trees from historical steps
       }
     },
@@ -246,7 +254,7 @@
         // call each); milestone closes are exempt, the hard line waives it.
         "min_steps": 3,
         "target_source_tokens": 2000,
-        "model": "gemini-3.8-flash",
+        "model": "qwen3.8",
         "max_chunks": 8
         // "max_eras": 8 // independent era cap; omitted = follows max_chunks
       },

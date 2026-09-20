@@ -260,6 +260,8 @@ def _expand_default_into_nodes(config_dict: dict) -> dict:
         "history_analyzer_expert",
         "diagnoser_expert",
         "explorer",
+        "validator_pixel_safety_net",
+        "planner_validation",
     ]
 
     all_utils_nodes = [
