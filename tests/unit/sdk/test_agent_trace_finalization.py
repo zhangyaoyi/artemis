@@ -16,9 +16,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from artemis.sdk.agent import Agent
+from artemis.config import settings
 from artemis.context import DeviceContext, DevicePlatform
 from artemis.runtime.device_lock import DeviceBusyError
+from artemis.sdk.agent import Agent
 from artemis.sdk.types.exceptions import AgentError
 
 
@@ -89,16 +90,30 @@ async def test_task_that_never_acquires_queue_does_not_create_trace_session():
 
 
 @pytest.mark.asyncio
-async def test_secure_keyguard_is_rejected_without_guessing_credentials():
+async def test_secure_keyguard_is_rejected_without_guessing_credentials(monkeypatch):
     agent = object.__new__(Agent)
     agent._device_context = MagicMock(device_id="device-123")
     agent._adb_client = MagicMock()
     agent._adb_client.device.return_value.shell.return_value = (
         'User "Owner" (id=0): deviceLocked=1\nUser "Work" (id=10): deviceLocked=1\n'
     )
+    monkeypatch.setattr(settings, "ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION", False)
 
     with pytest.raises(AgentError, match="Unlock the device manually"):
         await agent._ensure_device_unlocked()
+
+
+@pytest.mark.asyncio
+async def test_secure_keyguard_is_allowed_with_explicit_opt_in(monkeypatch):
+    agent = object.__new__(Agent)
+    agent._device_context = MagicMock(device_id="device-123")
+    agent._adb_client = MagicMock()
+    agent._adb_client.device.return_value.shell.return_value = (
+        'User "Owner" (id=0): deviceLocked=1\n'
+    )
+    monkeypatch.setattr(settings, "ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION", True)
+
+    await agent._ensure_device_unlocked()
 
 
 @pytest.mark.asyncio

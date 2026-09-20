@@ -18,6 +18,7 @@ import json
 from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from artemis.config import settings
 from artemis.core.diagnostics import readiness_engine
 from artemis.runtime import DeviceExecutionLock, device_pool
 
@@ -142,7 +143,12 @@ async def run_task(request: RunRequest):
     # device); the verified serial is bound below.
     target_serial = request.device_serial
     device_probe = await readiness_engine.run_device_submission_probe(target_serial=target_serial)
-    if device_probe and device_probe.summary in {"Device Locked", "Lock State Unknown"}:
+    keyguard_opt_in = settings.ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION
+    blocked_by_lock_state = device_probe and (
+        device_probe.summary == "Lock State Unknown"
+        or (device_probe.summary == "Device Locked" and not keyguard_opt_in)
+    )
+    if blocked_by_lock_state:
         locked_serial = (
             device_probe.metadata.get("active_device", {}).get("serial") or target_serial or ""
         )

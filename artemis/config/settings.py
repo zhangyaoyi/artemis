@@ -119,6 +119,10 @@ class Settings(BaseSettings):
     # Whether a task may install / upgrade the Accessibility Helper APK on a device
     # it holds. False = only attach to a helper installed by `artemis helper install`.
     ARTEMIS_HELPER_AUTO_INSTALL: bool = Field(default=True)
+    # Explicit opt-in for tasks that intentionally automate a secure keyguard.
+    # Keep disabled by default because task goals and traces may contain device
+    # credentials when this mode is used.
+    ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION: bool = Field(default=False)
 
     # Execution Defaults
     PROJECT_NAME: str | None = None

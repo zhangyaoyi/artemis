@@ -20,6 +20,7 @@ import pytest
 
 from apps.admin_console.routers import tasks
 from apps.admin_console.schemas.task_schema import RunRequest
+from artemis.config import settings
 from artemis.core.diagnostics.schema import (
     ProbeCategory,
     ProbeResult,
@@ -42,6 +43,7 @@ async def test_run_task_rejects_locked_device(monkeypatch):
     enqueue_tasks = AsyncMock()
     monkeypatch.setattr(tasks.readiness_engine, "run_device_submission_probe", run_probe)
     monkeypatch.setattr(tasks.task_queue_service, "enqueue_tasks", enqueue_tasks)
+    monkeypatch.setattr(settings, "ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION", False)
 
     with pytest.raises(HTTPException) as exc_info:
         await tasks.run_task(RunRequest(goal="Open Settings"))
@@ -49,6 +51,30 @@ async def test_run_task_rejects_locked_device(monkeypatch):
     assert exc_info.value.status_code == 409
     assert "locked" in exc_info.value.detail.lower()
     enqueue_tasks.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_run_task_enqueues_locked_device_with_explicit_opt_in(monkeypatch):
+    locked_probe = ProbeResult(
+        id="android_adb",
+        category=ProbeCategory.DEVICE,
+        title="Device / Emulator Connected",
+        status=ProbeStatus.WARN,
+        is_blocker=True,
+        summary="Device Locked",
+        description="Locked.",
+        metadata={"active_device": {"serial": "pixel-8a", "is_locked": True}},
+    )
+    run_probe = AsyncMock(return_value=locked_probe)
+    enqueue_tasks = AsyncMock(return_value={"status": "started", "tasks": []})
+    monkeypatch.setattr(tasks.readiness_engine, "run_device_submission_probe", run_probe)
+    monkeypatch.setattr(tasks.task_queue_service, "enqueue_tasks", enqueue_tasks)
+    monkeypatch.setattr(settings, "ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION", True)
+
+    result = await tasks.run_task(RunRequest(goal="Unlock the device"))
+
+    assert result["status"] == "started"
+    enqueue_tasks.assert_awaited_once()
 
 
 @pytest.mark.asyncio

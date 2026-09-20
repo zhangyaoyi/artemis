@@ -989,7 +989,7 @@ class Agent:
         logger.info("✅ Artemis agent stopped.")
 
     async def _ensure_device_unlocked(self) -> None:
-        """Reject secure keyguard instead of allowing an agent to guess credentials."""
+        """Reject secure keyguard unless the deployment explicitly opts in."""
         if self._adb_client is None:
             raise AgentError("ADB client is not initialized.")
 
@@ -1007,6 +1007,12 @@ class Agent:
             return
         value = match.group(0).split("=", 1)[1].lower()
         if value in {"true", "1"}:
+            if settings.ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION:
+                logger.warning(
+                    "Android secure keyguard is locked; continuing because "
+                    "ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION is enabled."
+                )
+                return
             raise AgentError(
                 "Android secure keyguard is locked. Unlock the device manually before "
                 "running Artemis; automation will not guess a PIN, password, or pattern."
