@@ -6,6 +6,15 @@ import pytest
 from mcp_server.background.task_runner import _initialize_agent
 
 
+@pytest.fixture(autouse=True)
+def no_deployment_device_override(monkeypatch):
+    """Keep the workstation's .env binding out of hermetic runner tests."""
+    from artemis.config import settings
+
+    monkeypatch.delenv("ADB_DEVICE_SERIAL", raising=False)
+    monkeypatch.setattr(settings, "ADB_DEVICE_SERIAL", None)
+
+
 @pytest.mark.asyncio
 async def test_background_agent_initialization_has_hard_timeout():
     async def slow_init(**_):

@@ -49,6 +49,22 @@ async def mobile_get_device_state(view_type: str, device_serial: str | None = No
           several devices attached, confirm the target with the user
           (`adb devices -l` lists serials).
     """
+    from artemis.runtime import device_pool
+
+    configured_serial = device_pool.configured_device_serial()
+    if configured_serial:
+        if device_serial and not device_pool.matches_configured_device(device_serial):
+            return (
+                f"Error: Device '{device_serial}' is not the configured Artemis device. "
+                f"Only '{configured_serial}' may be used."
+            )
+        try:
+            device_serial = await device_pool.ensure_configured_device_async()
+        except Exception:
+            device_serial = None
+        if not device_serial:
+            return f"Error: Configured Artemis device '{configured_serial}' is unavailable."
+
     try:
         controller = _get_controller(device_serial=device_serial)
         device_width = controller.ctx.device.device_width

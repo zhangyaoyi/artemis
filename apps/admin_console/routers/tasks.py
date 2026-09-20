@@ -118,9 +118,9 @@ async def run_task(request: RunRequest):
     # not silently fall back to another attached phone or emulator. Its dynamic
     # TLS port is resolved only on task admission, never by status polling.
     target_serial = request.device_serial
-    configured_serial = device_pool.configured_wifi_hardware_serial()
+    configured_serial = device_pool.configured_device_serial()
     if configured_serial:
-        if target_serial and not device_pool.matches_configured_wifi_device(target_serial):
+        if target_serial and not device_pool.matches_configured_device(target_serial):
             return {
                 "status": "rejected",
                 "error": (
@@ -132,7 +132,7 @@ async def run_task(request: RunRequest):
                 "total_queued": len(state.queue_tasks),
             }
         try:
-            connected_serial = await device_pool.ensure_configured_wifi_device_async()
+            connected_serial = await device_pool.ensure_configured_device_async()
         except Exception:
             connected_serial = None
         if not connected_serial:

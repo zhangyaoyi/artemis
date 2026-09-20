@@ -31,7 +31,7 @@ from artemis.core.diagnostics.schema import (
 @pytest.fixture(autouse=True)
 def no_deployment_device_override(monkeypatch):
     """Keep local .env device binding out of unrelated admission unit tests."""
-    monkeypatch.delenv("ARTEMIS_ADB_DEVICE_SERIAL", raising=False)
+    monkeypatch.delenv("ADB_DEVICE_SERIAL", raising=False)
 
 
 @pytest.mark.asyncio
@@ -155,17 +155,17 @@ async def test_run_task_reconnects_configured_wifi_device_on_demand(monkeypatch)
     enqueue_tasks = AsyncMock(return_value={"status": "started", "tasks": []})
     monkeypatch.setattr(
         tasks.device_pool,
-        "ensure_configured_wifi_device_async",
+        "ensure_configured_device_async",
         ensure_device,
     )
     monkeypatch.setattr(
         tasks.device_pool,
-        "configured_wifi_hardware_serial",
+        "configured_device_serial",
         lambda: "TESTDEVICE123",
     )
     monkeypatch.setattr(
         tasks.device_pool,
-        "matches_configured_wifi_device",
+        "matches_configured_device",
         lambda serial: "TESTDEVICE123" in serial,
     )
     monkeypatch.setattr(
@@ -192,17 +192,17 @@ async def test_run_task_rejects_device_other_than_exclusive_configured_target(mo
     run_probe = AsyncMock()
     monkeypatch.setattr(
         tasks.device_pool,
-        "configured_wifi_hardware_serial",
+        "configured_device_serial",
         lambda: "TESTDEVICE123",
     )
     monkeypatch.setattr(
         tasks.device_pool,
-        "matches_configured_wifi_device",
+        "matches_configured_device",
         lambda serial: False,
     )
     monkeypatch.setattr(
         tasks.device_pool,
-        "ensure_configured_wifi_device_async",
+        "ensure_configured_device_async",
         ensure_device,
     )
     monkeypatch.setattr(tasks.readiness_engine, "run_device_submission_probe", run_probe)

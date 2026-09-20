@@ -135,16 +135,25 @@ async def execute_task(
     if settings.ADB_HOST:
         config.with_adb_server(host=settings.ADB_HOST, port=settings.ADB_PORT)
 
-    target_serial = (
-        device_serial or settings.ADB_DEVICE_SERIAL or os.environ.get("ADB_DEVICE_SERIAL")
-    )
-    if not target_serial:
-        try:
-            from artemis.runtime import device_pool
+    from artemis.runtime import device_pool
 
-            target_serial = device_pool.select_device()
-        except Exception:
-            target_serial = None
+    configured_serial = device_pool.configured_device_serial()
+    if configured_serial:
+        if device_serial and not device_pool.matches_configured_device(device_serial):
+            raise RuntimeError(
+                f"Device '{device_serial}' is not the configured Artemis device. "
+                f"Only '{configured_serial}' may be used."
+            )
+        target_serial = await device_pool.ensure_configured_device_async()
+        if not target_serial:
+            raise RuntimeError(f"Configured Artemis device '{configured_serial}' is unavailable.")
+    else:
+        target_serial = device_serial
+        if not target_serial:
+            try:
+                target_serial = device_pool.select_device()
+            except Exception:
+                target_serial = None
 
     if target_serial:
         from artemis.context import DevicePlatform

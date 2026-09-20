@@ -168,9 +168,24 @@ async def run_task(
         from artemis.sdk.builders import Builders
         from artemis.sdk.types import AgentProfile
 
-        connected_devices = device_utils.get_connected_devices(adb_path)
+        from artemis.runtime import device_pool
 
-        if device_serial:
+        connected_devices = device_utils.get_connected_devices(adb_path)
+        configured_serial = device_pool.configured_device_serial()
+
+        if configured_serial:
+            if device_serial and not device_pool.matches_configured_device(device_serial):
+                raise RuntimeError(
+                    f"Device '{device_serial}' is not the configured Artemis device. "
+                    f"Only '{configured_serial}' may be used."
+                )
+            target_serial = await device_pool.ensure_configured_device_async()
+            if not target_serial:
+                raise RuntimeError(
+                    f"Configured Artemis device '{configured_serial}' is unavailable."
+                )
+            print(f"✅ Using configured target device: '{target_serial}'.")
+        elif device_serial:
             target_serial = device_serial
             if connected_devices and device_serial not in connected_devices:
                 print(
@@ -186,8 +201,6 @@ async def run_task(
                     try:
                         # Optional path: pool-based selection falls back to the
                         # first connected device on any import or query failure.
-                        from artemis.runtime import device_pool
-
                         target_serial = device_pool.select_device()
                     except Exception:
                         target_serial = connected_devices[0]

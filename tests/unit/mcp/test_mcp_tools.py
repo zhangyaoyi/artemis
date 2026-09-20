@@ -34,6 +34,15 @@ from mcp_server.tools import (
 from artemis.runtime import trace_store
 
 
+@pytest.fixture(autouse=True)
+def no_deployment_device_override(monkeypatch):
+    """Keep the workstation's .env binding out of hermetic MCP tool tests."""
+    from artemis.config import settings
+
+    monkeypatch.delenv("ADB_DEVICE_SERIAL", raising=False)
+    monkeypatch.setattr(settings, "ADB_DEVICE_SERIAL", None)
+
+
 @pytest.fixture
 def temp_trace_env(monkeypatch):
     temp_dir = tempfile.mkdtemp()

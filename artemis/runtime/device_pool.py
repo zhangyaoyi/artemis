@@ -78,7 +78,7 @@ class DevicePool:
     # adb server itself, which routinely exceeds the hot-path budget.
     HOT_QUERY_TIMEOUT = 2.0
     COLD_QUERY_TIMEOUT = 8.0
-    WIFI_DEVICE_SERIAL_ENV = "ARTEMIS_ADB_DEVICE_SERIAL"
+    DEVICE_SERIAL_ENV = "ADB_DEVICE_SERIAL"
 
     def __init__(self, adb_path: str | None = None):
         self._adb_path = adb_path
@@ -365,22 +365,38 @@ class DevicePool:
         return None if raw is None else self._build_statuses(raw)
 
     @staticmethod
-    def _matches_wifi_hardware_serial(adb_serial: str, hardware_serial: str) -> bool:
-        """Return whether an ADB transport belongs to one paired Wi-Fi device."""
-        candidate = adb_serial.casefold()
-        target = hardware_serial.casefold()
-        return candidate == target or candidate.startswith(f"adb-{target}-")
+    def _wifi_hardware_serial(configured_serial: str) -> str | None:
+        """Extract a stable hardware ID from a bare or mDNS ADB serial."""
+        candidate = configured_serial.strip()
+        folded = candidate.casefold()
+        if folded.startswith("adb-") and "._adb-tls-connect._tcp" in folded:
+            remainder = candidate[4:]
+            hardware_serial, separator, _ = remainder.partition("-")
+            return hardware_serial if separator and hardware_serial else None
+        if ":" in candidate or folded.startswith("emulator-"):
+            return None
+        return candidate or None
 
-    def configured_wifi_hardware_serial(self) -> str | None:
-        """Return the deployment's exclusive Wi-Fi ADB target, if configured."""
-        value = os.getenv(self.WIFI_DEVICE_SERIAL_ENV, "").strip()
+    @classmethod
+    def _matches_configured_serial(cls, adb_serial: str, configured_serial: str) -> bool:
+        """Return whether an ADB transport belongs to the configured target."""
+        candidate = adb_serial.casefold()
+        configured = configured_serial.casefold()
+        if candidate == configured:
+            return True
+        hardware_serial = cls._wifi_hardware_serial(configured_serial)
+        return bool(hardware_serial and candidate.startswith(f"adb-{hardware_serial.casefold()}-"))
+
+    def configured_device_serial(self) -> str | None:
+        """Return the deployment's exclusive default ADB target, if configured."""
+        value = os.getenv(self.DEVICE_SERIAL_ENV, "").strip()
         return value or None
 
-    def matches_configured_wifi_device(self, adb_serial: str) -> bool:
+    def matches_configured_device(self, adb_serial: str) -> bool:
         """Return whether a requested transport refers to the configured target."""
-        hardware_serial = self.configured_wifi_hardware_serial()
+        configured_serial = self.configured_device_serial()
         return bool(
-            hardware_serial and self._matches_wifi_hardware_serial(adb_serial, hardware_serial)
+            configured_serial and self._matches_configured_serial(adb_serial, configured_serial)
         )
 
     async def _discover_wifi_endpoint_async(
@@ -449,31 +465,31 @@ class DevicePool:
                 except (ProcessLookupError, OSError):
                     pass
 
-    async def ensure_configured_wifi_device_async(
+    async def ensure_configured_device_async(
         self,
         *,
         timeout: float = 10.0,
         poll_interval: float = 0.5,
     ) -> str | None:
-        """Reconnect the configured paired device only when a task needs it.
+        """Resolve and reconnect the configured ADB target when a task needs it.
 
         Normal device/status polling deliberately does not call this method.
-        A deployment opts in by setting ``ARTEMIS_ADB_DEVICE_SERIAL`` to the
-        phone's stable hardware serial. The current dynamic TLS port is then
-        resolved from ADB mDNS instead of being persisted in configuration.
+        ``ADB_DEVICE_SERIAL`` may contain a normal ADB transport serial or a
+        phone's stable hardware serial. For the latter, the current wireless
+        TLS endpoint is resolved from mDNS instead of being persisted.
 
         Returns the live ADB transport serial when the configured device is
         ready, otherwise ``None``. Other attached devices are deliberately
         ignored: a configured serial is the deployment's exclusive target.
         """
-        hardware_serial = self.configured_wifi_hardware_serial()
-        if not hardware_serial:
+        configured_serial = self.configured_device_serial()
+        if not configured_serial:
             return None
 
         devices = await self.try_list_devices_async()
         ready_devices = [device for device in devices or [] if device.state == "device"]
         for device in ready_devices:
-            if self._matches_wifi_hardware_serial(device.serial, hardware_serial):
+            if self._matches_configured_serial(device.serial, configured_serial):
                 return device.serial
 
         adb = self._resolve_adb()
@@ -481,21 +497,24 @@ class DevicePool:
             return None
 
         deadline = time.monotonic() + max(timeout, 0.0)
-        endpoint: str | None = None
+        hardware_serial = self._wifi_hardware_serial(configured_serial)
+        endpoint: str | None = configured_serial if ":" in configured_serial else None
+        connect_attempted = False
         while time.monotonic() < deadline:
             remaining = deadline - time.monotonic()
-            if endpoint is None:
+            if endpoint is None and hardware_serial:
                 endpoint = await self._discover_wifi_endpoint_async(
                     adb,
                     hardware_serial,
                     timeout=max(0.1, min(3.0, remaining)),
                 )
-                if endpoint:
-                    await self._connect_wifi_endpoint_async(
-                        adb,
-                        endpoint,
-                        timeout=max(0.1, min(3.0, deadline - time.monotonic())),
-                    )
+            if endpoint and not connect_attempted:
+                await self._connect_wifi_endpoint_async(
+                    adb,
+                    endpoint,
+                    timeout=max(0.1, min(3.0, deadline - time.monotonic())),
+                )
+                connect_attempted = True
 
             raw = await self._query_adb_devices_async(
                 timeout=max(0.1, min(self.HOT_QUERY_TIMEOUT, deadline - time.monotonic()))
@@ -504,11 +523,11 @@ class DevicePool:
                 self._store_snapshot(raw)
                 for serial, state, _, _ in raw:
                     if state == "device" and (
-                        self._matches_wifi_hardware_serial(serial, hardware_serial)
+                        self._matches_configured_serial(serial, configured_serial)
                         or (endpoint is not None and serial == endpoint)
                     ):
                         logger.info(
-                            f"Connected configured ADB Wi-Fi device {hardware_serial} as {serial}"
+                            f"Connected configured ADB device {configured_serial} as {serial}"
                         )
                         return serial
 
@@ -518,7 +537,7 @@ class DevicePool:
             await asyncio.sleep(min(poll_interval, remaining))
 
         logger.warning(
-            f"Configured ADB Wi-Fi device {hardware_serial} was not available within {timeout:.1f}s"
+            f"Configured ADB device {configured_serial} was not available within {timeout:.1f}s"
         )
         return None
 

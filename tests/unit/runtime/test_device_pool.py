@@ -305,7 +305,7 @@ def test_validate_explicit_serial_async_matches_sync(monkeypatch):
 
 def test_on_demand_wifi_reconnect_resolves_dynamic_endpoint(monkeypatch):
     pool = DevicePool(adb_path="adb")
-    monkeypatch.setenv(pool.WIFI_DEVICE_SERIAL_ENV, "TESTDEVICE123")
+    monkeypatch.setenv(pool.DEVICE_SERIAL_ENV, "TESTDEVICE123")
     queries = iter(
         [
             [],
@@ -337,7 +337,7 @@ def test_on_demand_wifi_reconnect_resolves_dynamic_endpoint(monkeypatch):
     monkeypatch.setattr(pool, "_discover_wifi_endpoint_async", fake_discover)
     monkeypatch.setattr(pool, "_connect_wifi_endpoint_async", fake_connect)
 
-    result = asyncio.run(pool.ensure_configured_wifi_device_async(timeout=1.0, poll_interval=0.0))
+    result = asyncio.run(pool.ensure_configured_device_async(timeout=1.0, poll_interval=0.0))
 
     assert result == "adb-TESTDEVICE123-pair._adb-tls-connect._tcp"
     assert discovered == [("adb", "TESTDEVICE123")]
@@ -346,7 +346,7 @@ def test_on_demand_wifi_reconnect_resolves_dynamic_endpoint(monkeypatch):
 
 def test_on_demand_wifi_reconnect_ignores_other_ready_devices(monkeypatch):
     pool = DevicePool(adb_path="adb")
-    monkeypatch.setenv(pool.WIFI_DEVICE_SERIAL_ENV, "TESTDEVICE123")
+    monkeypatch.setenv(pool.DEVICE_SERIAL_ENV, "TESTDEVICE123")
     responses = iter(
         [
             [RAW_DEVICE],
@@ -376,7 +376,44 @@ def test_on_demand_wifi_reconnect_ignores_other_ready_devices(monkeypatch):
     monkeypatch.setattr(pool, "_discover_wifi_endpoint_async", fake_discover)
     monkeypatch.setattr(pool, "_connect_wifi_endpoint_async", fake_connect)
 
-    result = asyncio.run(pool.ensure_configured_wifi_device_async(timeout=1.0, poll_interval=0.0))
+    result = asyncio.run(pool.ensure_configured_device_async(timeout=1.0, poll_interval=0.0))
 
     assert result == "adb-TESTDEVICE123-pair._adb-tls-connect._tcp"
     assert discovered == ["TESTDEVICE123"]
+
+
+def test_configured_mDNS_serial_matches_same_hardware_transport(monkeypatch):
+    pool = DevicePool()
+    monkeypatch.setenv(
+        pool.DEVICE_SERIAL_ENV,
+        "adb-TESTDEVICE123-oldpair._adb-tls-connect._tcp",
+    )
+
+    assert pool.matches_configured_device("adb-TESTDEVICE123-newpair._adb-tls-connect._tcp")
+    assert not pool.matches_configured_device("adb-OTHERDEVICE-newpair._adb-tls-connect._tcp")
+
+
+def test_configured_tcp_serial_runs_adb_connect(monkeypatch):
+    pool = DevicePool(adb_path="adb")
+    monkeypatch.setenv(pool.DEVICE_SERIAL_ENV, "192.168.1.200:45678")
+    responses = iter(
+        [
+            [],
+            [("192.168.1.200:45678", "device", "Pixel 8a", "akita")],
+        ]
+    )
+    connected = []
+
+    async def fake_query(timeout=None):
+        return next(responses)
+
+    async def fake_connect(adb, endpoint, *, timeout):
+        connected.append((adb, endpoint))
+
+    monkeypatch.setattr(pool, "_query_adb_devices_async", fake_query)
+    monkeypatch.setattr(pool, "_connect_wifi_endpoint_async", fake_connect)
+
+    result = asyncio.run(pool.ensure_configured_device_async(timeout=1.0, poll_interval=0.0))
+
+    assert result == "192.168.1.200:45678"
+    assert connected == [("adb", "192.168.1.200:45678")]
