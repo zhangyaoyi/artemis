@@ -28,6 +28,12 @@ from artemis.core.diagnostics.schema import (
 )
 
 
+@pytest.fixture(autouse=True)
+def no_deployment_device_override(monkeypatch):
+    """Keep local .env device binding out of unrelated admission unit tests."""
+    monkeypatch.delenv("ARTEMIS_ADB_DEVICE_SERIAL", raising=False)
+
+
 @pytest.mark.asyncio
 async def test_run_task_rejects_locked_device(monkeypatch):
     locked_probe = ProbeResult(
@@ -128,6 +134,85 @@ async def test_run_task_binds_probe_verified_device_when_no_serial_requested(mon
     # Check that device_serial passed to enqueue_tasks is the verified unlocked device
     _, kwargs = enqueue_tasks.call_args
     assert kwargs.get("device_serial") == "emulator-5556"
+
+
+@pytest.mark.asyncio
+async def test_run_task_reconnects_configured_wifi_device_on_demand(monkeypatch):
+    mdns_serial = "adb-TESTDEVICE123-pair._adb-tls-connect._tcp"
+    ensure_device = AsyncMock(return_value=mdns_serial)
+    validate_serial = AsyncMock(return_value=None)
+    unlocked_probe = ProbeResult(
+        id="android_adb",
+        category=ProbeCategory.DEVICE,
+        title="Device / Emulator Connected",
+        status=ProbeStatus.PASS,
+        is_blocker=True,
+        summary="Connected",
+        description="Ready.",
+        metadata={"active_device": {"serial": mdns_serial, "is_locked": False}},
+    )
+    run_probe = AsyncMock(return_value=unlocked_probe)
+    enqueue_tasks = AsyncMock(return_value={"status": "started", "tasks": []})
+    monkeypatch.setattr(
+        tasks.device_pool,
+        "ensure_configured_wifi_device_async",
+        ensure_device,
+    )
+    monkeypatch.setattr(
+        tasks.device_pool,
+        "configured_wifi_hardware_serial",
+        lambda: "TESTDEVICE123",
+    )
+    monkeypatch.setattr(
+        tasks.device_pool,
+        "matches_configured_wifi_device",
+        lambda serial: "TESTDEVICE123" in serial,
+    )
+    monkeypatch.setattr(
+        tasks.device_pool,
+        "validate_explicit_serial_async",
+        validate_serial,
+    )
+    monkeypatch.setattr(tasks.readiness_engine, "run_device_submission_probe", run_probe)
+    monkeypatch.setattr(tasks.task_queue_service, "enqueue_tasks", enqueue_tasks)
+
+    result = await tasks.run_task(RunRequest(goal="Open Settings"))
+
+    assert result["status"] == "started"
+    ensure_device.assert_awaited_once_with()
+    validate_serial.assert_awaited_once_with(mdns_serial)
+    run_probe.assert_awaited_once_with(target_serial=mdns_serial)
+    _, kwargs = enqueue_tasks.call_args
+    assert kwargs["device_serial"] == mdns_serial
+
+
+@pytest.mark.asyncio
+async def test_run_task_rejects_device_other_than_exclusive_configured_target(monkeypatch):
+    ensure_device = AsyncMock()
+    run_probe = AsyncMock()
+    monkeypatch.setattr(
+        tasks.device_pool,
+        "configured_wifi_hardware_serial",
+        lambda: "TESTDEVICE123",
+    )
+    monkeypatch.setattr(
+        tasks.device_pool,
+        "matches_configured_wifi_device",
+        lambda serial: False,
+    )
+    monkeypatch.setattr(
+        tasks.device_pool,
+        "ensure_configured_wifi_device_async",
+        ensure_device,
+    )
+    monkeypatch.setattr(tasks.readiness_engine, "run_device_submission_probe", run_probe)
+
+    result = await tasks.run_task(RunRequest(goal="Open Settings", device_serial="another-device"))
+
+    assert result["status"] == "rejected"
+    assert "not the configured Artemis device" in result["error"]
+    ensure_device.assert_not_awaited()
+    run_probe.assert_not_awaited()
 
 
 @pytest.mark.asyncio

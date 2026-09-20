@@ -114,15 +114,46 @@ async def run_task(request: RunRequest):
                 "total_queued": len(state.queue_tasks),
             }
 
+    # When a deployment configures one Wi-Fi device, it is authoritative: do
+    # not silently fall back to another attached phone or emulator. Its dynamic
+    # TLS port is resolved only on task admission, never by status polling.
+    target_serial = request.device_serial
+    configured_serial = device_pool.configured_wifi_hardware_serial()
+    if configured_serial:
+        if target_serial and not device_pool.matches_configured_wifi_device(target_serial):
+            return {
+                "status": "rejected",
+                "error": (
+                    f"Device '{target_serial}' is not the configured Artemis device. "
+                    f"Only '{configured_serial}' may be used."
+                ),
+                "tasks": [],
+                "enqueued_count": 0,
+                "total_queued": len(state.queue_tasks),
+            }
+        try:
+            connected_serial = await device_pool.ensure_configured_wifi_device_async()
+        except Exception:
+            connected_serial = None
+        if not connected_serial:
+            return {
+                "status": "rejected",
+                "error": f"Configured Artemis device '{configured_serial}' is unavailable.",
+                "tasks": [],
+                "enqueued_count": 0,
+                "total_queued": len(state.queue_tasks),
+            }
+        target_serial = connected_serial
+
     # Reject an explicit unknown/offline target before running the more
     # expensive readiness probe. Besides producing a stable SDK response,
     # this avoids probing the currently active device for a serial that can
     # never be selected. Only a successful, non-empty enumeration may reject:
     # an indeterminate one (adb blip, startup) lets the submission queue and
     # fail downstream with a clear error instead.
-    if request.device_serial:
+    if target_serial:
         try:
-            rejection = await device_pool.validate_explicit_serial_async(request.device_serial)
+            rejection = await device_pool.validate_explicit_serial_async(target_serial)
         except Exception:
             rejection = None
         if rejection:
@@ -141,7 +172,6 @@ async def run_task(request: RunRequest):
     # With no explicit serial the probe itself resolves a live target (it
     # prefers the diagnostics target preference, then any unlocked ready
     # device); the verified serial is bound below.
-    target_serial = request.device_serial
     device_probe = await readiness_engine.run_device_submission_probe(target_serial=target_serial)
     keyguard_opt_in = settings.ARTEMIS_ALLOW_SECURE_KEYGUARD_AUTOMATION
     blocked_by_lock_state = device_probe and (

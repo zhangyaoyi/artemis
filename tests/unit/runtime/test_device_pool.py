@@ -301,3 +301,82 @@ def test_validate_explicit_serial_async_matches_sync(monkeypatch):
     ok, missing = asyncio.run(run())
     assert ok is None
     assert "not connected" in missing
+
+
+def test_on_demand_wifi_reconnect_resolves_dynamic_endpoint(monkeypatch):
+    pool = DevicePool(adb_path="adb")
+    monkeypatch.setenv(pool.WIFI_DEVICE_SERIAL_ENV, "TESTDEVICE123")
+    queries = iter(
+        [
+            [],
+            [],
+            [
+                (
+                    "adb-TESTDEVICE123-pair._adb-tls-connect._tcp",
+                    "device",
+                    "Pixel 8a",
+                    "akita",
+                )
+            ],
+        ]
+    )
+    discovered = []
+    connected = []
+
+    async def fake_query(timeout=None):
+        return next(queries)
+
+    async def fake_discover(adb, hardware_serial, *, timeout):
+        discovered.append((adb, hardware_serial))
+        return "192.168.1.200:45678"
+
+    async def fake_connect(adb, endpoint, *, timeout):
+        connected.append((adb, endpoint))
+
+    monkeypatch.setattr(pool, "_query_adb_devices_async", fake_query)
+    monkeypatch.setattr(pool, "_discover_wifi_endpoint_async", fake_discover)
+    monkeypatch.setattr(pool, "_connect_wifi_endpoint_async", fake_connect)
+
+    result = asyncio.run(pool.ensure_configured_wifi_device_async(timeout=1.0, poll_interval=0.0))
+
+    assert result == "adb-TESTDEVICE123-pair._adb-tls-connect._tcp"
+    assert discovered == [("adb", "TESTDEVICE123")]
+    assert connected == [("adb", "192.168.1.200:45678")]
+
+
+def test_on_demand_wifi_reconnect_ignores_other_ready_devices(monkeypatch):
+    pool = DevicePool(adb_path="adb")
+    monkeypatch.setenv(pool.WIFI_DEVICE_SERIAL_ENV, "TESTDEVICE123")
+    responses = iter(
+        [
+            [RAW_DEVICE],
+            [
+                (
+                    "adb-TESTDEVICE123-pair._adb-tls-connect._tcp",
+                    "device",
+                    "Pixel 8a",
+                    "akita",
+                )
+            ],
+        ]
+    )
+    discovered = []
+
+    async def fake_query(timeout=None):
+        return next(responses)
+
+    async def fake_discover(adb, hardware_serial, *, timeout):
+        discovered.append(hardware_serial)
+        return "192.168.1.200:45678"
+
+    async def fake_connect(adb, endpoint, *, timeout):
+        return None
+
+    monkeypatch.setattr(pool, "_query_adb_devices_async", fake_query)
+    monkeypatch.setattr(pool, "_discover_wifi_endpoint_async", fake_discover)
+    monkeypatch.setattr(pool, "_connect_wifi_endpoint_async", fake_connect)
+
+    result = asyncio.run(pool.ensure_configured_wifi_device_async(timeout=1.0, poll_interval=0.0))
+
+    assert result == "adb-TESTDEVICE123-pair._adb-tls-connect._tcp"
+    assert discovered == ["TESTDEVICE123"]

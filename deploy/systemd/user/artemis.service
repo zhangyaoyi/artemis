@@ -1,0 +1,23 @@
+[Unit]
+Description=Artemis mobile automation Web/API service
+Documentation=file:///home/overman/projects/artemis/README.md
+Wants=network-online.target llama-swap.service artemis-adb-server.service
+After=network-online.target llama-swap.service artemis-adb-server.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/overman/projects/artemis
+Environment=PYTHONUNBUFFERED=1
+Environment=PATH=/home/overman/projects/artemis/.venv/bin:/home/overman/.local/share/scrcpy:/home/overman/.local/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-/home/overman/projects/artemis/.env
+ExecStartPre=/usr/bin/test -x /home/overman/projects/artemis/.venv/bin/python
+ExecStart=/home/overman/projects/artemis/.venv/bin/python -m apps.admin_console.server --host 127.0.0.1 --port 8081
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=45
+KillMode=mixed
+NoNewPrivileges=true
+LimitNOFILE=65536
+
+[Install]
+WantedBy=default.target
