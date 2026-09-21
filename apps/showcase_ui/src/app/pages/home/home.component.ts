@@ -540,7 +540,16 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.loadProTuningDefaults();
     // Initial fetch of system readiness & model configuration
     this.systemService.fetchReadiness().subscribe();
-    this.systemService.fetchModelConfigEnv().subscribe();
+    this.systemService.fetchModelConfigEnv().subscribe({
+      next: cfg => {
+        // Preselect the setup mode that matches the configured default provider.
+        const provider = cfg.default_model?.provider;
+        if (provider && provider !== 'google') {
+          this.setModelSetupMode('custom');
+        }
+      },
+      error: () => {}
+    });
     this.systemService.fetchAdbServerStatus().subscribe({
       next: status => {
         if (status.endpoint.mode === 'remote') {
