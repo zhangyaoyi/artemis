@@ -31,7 +31,12 @@ from artemis.interfaces.cli.commands.ui import (
     load_session_reconciler,
     ui_command,
 )
-from artemis.runtime.daemon_client import daemon_log_path, is_daemon_running, spawn_daemon
+from artemis.runtime.daemon_client import (
+    DEFAULT_DAEMON_PORT,
+    daemon_log_path,
+    is_daemon_running,
+    spawn_daemon,
+)
 from artemis.runtime.server_lifecycle import (
     find_server_pids,
     get_server_status,
@@ -72,7 +77,7 @@ def restart_command(
     port: Annotated[
         int,
         typer.Option("--port", "-p", help="Port to run the unified UI server on."),
-    ] = 8000,
+    ] = DEFAULT_DAEMON_PORT,
     open_browser: Annotated[
         bool,
         typer.Option(
@@ -203,7 +208,7 @@ def stop_command(
     port: Annotated[
         int,
         typer.Option("--port", "-p", help="Port of the Artemis server to stop."),
-    ] = 8000,
+    ] = DEFAULT_DAEMON_PORT,
     force: Annotated[
         bool,
         typer.Option(
@@ -261,7 +266,7 @@ def status_command(
     port: Annotated[
         int,
         typer.Option("--port", "-p", help="Port to query for Artemis server status."),
-    ] = 8000,
+    ] = DEFAULT_DAEMON_PORT,
 ) -> None:
     """Check whether the Artemis server is currently running and display runtime metadata."""
     console.print()

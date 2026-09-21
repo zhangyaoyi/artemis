@@ -31,6 +31,8 @@ from rich.markup import escape
 from rich.panel import Panel
 import typer
 
+from artemis.runtime.daemon_client import DEFAULT_DAEMON_PORT
+
 logger = logging.getLogger(__name__)
 
 
@@ -273,7 +275,7 @@ def ui_command(
     port: Annotated[
         int,
         typer.Option("--port", "-p", help="Port to run the unified UI server on."),
-    ] = 8000,
+    ] = DEFAULT_DAEMON_PORT,
     open_browser: Annotated[
         bool,
         typer.Option(
