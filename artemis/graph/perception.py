@@ -18,6 +18,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from artemis.mcp.observation import settle_ms_after
 from artemis.context import ArtemisContext
 from artemis.controllers.unified_controller import UnifiedMobileController
 from artemis.data_engine.trace import trace
@@ -35,40 +36,51 @@ from artemis.utils.ocr_xml_fusion import (
 logger = get_logger(__name__)
 
 
+def _last_action_name(state: State) -> str | None:
+    """Name of the last executed action, or None when there is none.
+
+    Raises on malformed ``structured_decisions`` so callers can pick their own fallback.
+    """
+    if not state or not state.structured_decisions:
+        return None
+    actions = json.loads(state.structured_decisions)
+    if not actions or not isinstance(actions, list):
+        return None
+    return actions[-1].get("action") or ""
+
+
 def _should_skip_settling(state: State) -> bool:
     """Determine if we should skip screen settling based on the last executed action.
 
     Purely logical, non-UI-drawing, or wait operations don't require dynamic
     settling checks.
     """
-    if not state or not state.structured_decisions:
-        # First turn or no prior action, skip settling
-        return True
-
     try:
-        actions = json.loads(state.structured_decisions)
-        if not actions or not isinstance(actions, list):
-            return True
-
-        last_action = actions[-1]
-        action_name = last_action.get("action")
-
-        # Actions that are known to have already completed full wait loops or don't render UI
-        skip_actions = {
-            "wait_for_delay",
-        }
-
-        if action_name in skip_actions:
-            logger.info(f"Last action was '{action_name}'. Skipping dynamic screen settling.")
-            return True
-
-        return False
+        action_name = _last_action_name(state)
     except Exception as e:
         logger.warning(
             f"Failed to parse last action for settling heuristic: {e}."
             " Defaulting to settling check."
         )
         return False
+
+    # First turn / no prior action, or an action that already completed a full
+    # wait loop or doesn't render UI.
+    if action_name is None:
+        return True
+    if action_name in {"wait_for_delay"}:
+        logger.info(f"Last action was '{action_name}'. Skipping dynamic screen settling.")
+        return True
+    return False
+
+
+def _settle_delay_seconds(state: State) -> float:
+    """Delay after the last action before capturing; longer for app launches."""
+    try:
+        action_name = _last_action_name(state)
+    except Exception:
+        action_name = None
+    return settle_ms_after(action_name) / 1000.0
 
 
 @trace(type="agent", name="perception")
@@ -155,8 +167,9 @@ async def perception_node(state: State, ctx: ArtemisContext) -> dict:
         latest_screenshot_b64 = device_data.base64
         xml_hierarchy = device_data.elements
     else:
-        logger.info("Screen settling required. Delaying 0.4s and capturing screen data...")
-        await asyncio.sleep(0.4)
+        settle_delay = _settle_delay_seconds(state)
+        logger.info(f"Screen settling required. Delaying {settle_delay}s before capture...")
+        await asyncio.sleep(settle_delay)
         device_data = await controller.get_screen_data()
         latest_screenshot_b64 = device_data.base64
         xml_hierarchy = device_data.elements

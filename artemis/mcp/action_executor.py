@@ -44,6 +44,7 @@ from artemis.mcp.action_manifest import OPTIONAL_ACTIONS, REQUIRED_ACTIONS
 from artemis.mcp.action_specs import exception_prefix
 from artemis.mcp.action_session import ActionSession, get_action_session
 from artemis.mcp.action_types import ActionCode, ActionResult
+from artemis.mcp.observation import settle_ms_after
 from artemis.mcp.actuators.adb import AdbActuator
 from artemis.agents.validator.tool_declarations import (
     ToolExecutionResult,
@@ -196,7 +197,7 @@ class McpActionExecutor:
                     message = finalize(res) if finalize else res.message
 
                 if res.ok or self._observe_despite_failure(raw_name, res):
-                    obs = await session.observe(settle_ms=400)
+                    obs = await session.observe(settle_ms=settle_ms_after(raw_name))
                     if obs.ok:
                         shot_path = obs.screenshot_path
                         xml_list = obs.elements_text

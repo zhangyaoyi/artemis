@@ -22,6 +22,7 @@ Validator -- which runs its own UI-change polling -- simply never calls it.
 
 import asyncio
 import base64
+import os
 import time
 
 from artemis.config import get_temp_dir
@@ -34,7 +35,18 @@ from artemis.utils.visualization import format_minimal_list_with_elements
 
 logger = get_logger(__name__)
 
-__all__ = ["observe"]
+__all__ = ["observe", "settle_ms_after"]
+
+
+def settle_ms_after(action: str | None) -> int:
+    """Settling delay (ms) after an action before observing the screen.
+
+    ``ARTEMIS_SETTLE_DELAY`` (seconds) sets the base; launch_app/manage_app wait at least 3s.
+    """
+    base = float(os.environ.get("ARTEMIS_SETTLE_DELAY", "1.5"))
+    if action in ("launch_app", "manage_app"):
+        base = max(base, 3.0)
+    return int(base * 1000)
 
 
 async def observe(
