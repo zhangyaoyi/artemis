@@ -203,7 +203,7 @@ def run_command(
             "-p",
             help="Execution profile ('flash' for fast reactive, 'pro' for full graph).",
         ),
-    ] = "pro",
+    ] = settings.ARTEMIS_DEFAULT_PROFILE,
     locked_app_package: Annotated[
         str | None,
         typer.Option(
@@ -386,7 +386,7 @@ def run_command(
                 )
                 resp = submit_task_to_daemon(
                     goal=goal,
-                    profile=profile or "pro",
+                    profile=profile or settings.ARTEMIS_DEFAULT_PROFILE,
                     device_serial=device_serial,
                     expected_output=output_description,
                     enable_outputter=enable_outputter,
