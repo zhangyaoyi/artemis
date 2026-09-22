@@ -16,8 +16,9 @@
 
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AppReference, SmartSuggestion } from '../../core/data/smart-tasks.data';
-import { TaskPresetWritePayload, TaskRecommendationService } from '../../core/services/task-recommendation.service';
+import { AppReference, ICON_OPTIONS, SmartSuggestion } from '../../core/data/smart-tasks.data';
+import { AppRegistryService, AppUpdatePayload, AppWritePayload } from '../../core/services/app-registry.service';
+import { TaskPresetWritePayload } from '../../core/services/task-recommendation.service';
 
 @Component({
   selector: 'app-task-preset-form',
@@ -32,14 +33,25 @@ export class TaskPresetFormComponent implements OnChanges {
   @Output() save = new EventEmitter<TaskPresetWritePayload>();
   @Output() cancel = new EventEmitter<void>();
 
-  private taskRecService = inject(TaskRecommendationService);
-  public appRegistryEntries: Array<[string, AppReference]> = Object.entries(this.taskRecService.appRegistry);
+  public appRegistryService = inject(AppRegistryService);
+  public readonly iconOptions = ICON_OPTIONS;
 
   public title = signal<string>('');
   public description = signal<string>('');
   public goal = signal<string>('');
   public profile = signal<'flash' | 'pro'>('flash');
   public selectedPkgs = signal<Set<string>>(new Set());
+
+  // Inline app-registry management (add/edit/delete an app from within
+  // this modal's app picker).
+  public showAppForm = signal<boolean>(false);
+  public editingApp = signal<AppReference | null>(null);
+  public appFormPkg = signal<string>('');
+  public appFormName = signal<string>('');
+  public appFormIcon = signal<string>(ICON_OPTIONS[0]);
+  public appFormCategory = signal<string>('general');
+  public appFormError = signal<string | null>(null);
+  public appDeleteError = signal<string | null>(null);
 
   ngOnChanges(_changes: SimpleChanges): void {
     const task = this.editingTask;
@@ -88,5 +100,72 @@ export class TaskPresetFormComponent implements OnChanges {
 
   public onCancel(): void {
     this.cancel.emit();
+  }
+
+  // --- Inline app-registry management ---
+
+  public openAddAppForm(): void {
+    this.editingApp.set(null);
+    this.appFormPkg.set('');
+    this.appFormName.set('');
+    this.appFormIcon.set(ICON_OPTIONS[0]);
+    this.appFormCategory.set('general');
+    this.appFormError.set(null);
+    this.showAppForm.set(true);
+  }
+
+  public openEditAppForm(app: AppReference, event: Event): void {
+    event.stopPropagation();
+    this.editingApp.set(app);
+    this.appFormPkg.set(app.pkg ?? '');
+    this.appFormName.set(app.name);
+    this.appFormIcon.set(app.icon);
+    this.appFormCategory.set(app.category ?? 'general');
+    this.appFormError.set(null);
+    this.showAppForm.set(true);
+  }
+
+  public closeAppForm(): void {
+    this.showAppForm.set(false);
+    this.editingApp.set(null);
+    this.appFormError.set(null);
+  }
+
+  public get isAppFormValid(): boolean {
+    const pkgOk = this.editingApp() !== null || this.appFormPkg().trim().length > 0;
+    return pkgOk && this.appFormName().trim().length > 0 && this.appFormIcon().trim().length > 0;
+  }
+
+  public saveApp(): void {
+    if (!this.isAppFormValid) {
+      return;
+    }
+    const editing = this.editingApp();
+    const updatePayload: AppUpdatePayload = {
+      name: this.appFormName().trim(),
+      icon: this.appFormIcon(),
+      category: this.appFormCategory().trim() || 'general'
+    };
+    const request$ = editing
+      ? this.appRegistryService.updateApp(editing.pkg!, updatePayload)
+      : this.appRegistryService.createApp({
+          pkg: this.appFormPkg().trim(),
+          ...updatePayload
+        } as AppWritePayload);
+    request$.subscribe({
+      next: () => this.closeAppForm(),
+      error: (err) => this.appFormError.set(err?.error?.detail || 'Failed to save app.')
+    });
+  }
+
+  public deleteApp(app: AppReference, event: Event): void {
+    event.stopPropagation();
+    if (!app.pkg) {
+      return;
+    }
+    this.appDeleteError.set(null);
+    this.appRegistryService.deleteApp(app.pkg).subscribe({
+      error: (err) => this.appDeleteError.set(err?.error?.detail || 'Failed to delete app.')
+    });
   }
 }

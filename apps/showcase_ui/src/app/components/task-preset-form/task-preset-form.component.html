@@ -33,19 +33,58 @@
 
       <div class="tpf-field">
         <span class="tpf-label">Apps</span>
+        @if (appDeleteError()) {
+          <span class="tpf-inline-error">{{ appDeleteError() }}</span>
+        }
         <div class="tpf-app-chips">
-          @for (entry of appRegistryEntries; track entry[0]) {
-            <button
-              type="button"
-              class="tpf-app-chip"
-              [class.selected]="isPkgSelected(entry[0])"
-              (click)="togglePkg(entry[0])"
-            >
-              <span class="material-symbols-outlined">{{ entry[1].icon }}</span>
-              <span>{{ entry[1].name }}</span>
-            </button>
+          @for (app of appRegistryService.apps(); track app.pkg) {
+            <div class="tpf-app-chip-wrap">
+              <button
+                type="button"
+                class="tpf-app-chip"
+                [class.selected]="isPkgSelected(app.pkg!)"
+                (click)="togglePkg(app.pkg!)"
+              >
+                <span class="material-symbols-outlined">{{ app.icon }}</span>
+                <span>{{ app.name }}</span>
+              </button>
+              <div class="tpf-chip-actions">
+                <button type="button" class="tpf-chip-action-btn" title="Edit app" (click)="openEditAppForm(app, $event)">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button type="button" class="tpf-chip-action-btn tpf-chip-action-danger" title="Delete app" (click)="deleteApp(app, $event)">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </div>
           }
+          <button type="button" class="tpf-app-chip tpf-add-app-chip" (click)="openAddAppForm()">
+            <span class="material-symbols-outlined">add</span>
+            <span>Add App</span>
+          </button>
         </div>
+
+        @if (showAppForm()) {
+          <div class="tpf-app-mini-form">
+            @if (!editingApp()) {
+              <input type="text" [ngModel]="appFormPkg()" (ngModelChange)="appFormPkg.set($event)" placeholder="Package name, e.g. com.example.app" />
+            }
+            <input type="text" [ngModel]="appFormName()" (ngModelChange)="appFormName.set($event)" placeholder="App name" />
+            <select [ngModel]="appFormIcon()" (ngModelChange)="appFormIcon.set($event)">
+              @for (icon of iconOptions; track icon) {
+                <option [value]="icon">{{ icon }}</option>
+              }
+            </select>
+            <input type="text" [ngModel]="appFormCategory()" (ngModelChange)="appFormCategory.set($event)" placeholder="Category (optional)" />
+            @if (appFormError()) {
+              <span class="tpf-inline-error">{{ appFormError() }}</span>
+            }
+            <div class="tpf-mini-actions">
+              <button type="button" class="tpf-btn-secondary" (click)="closeAppForm()">Cancel</button>
+              <button type="button" class="tpf-btn-primary" [disabled]="!isAppFormValid" (click)="saveApp()">{{ editingApp() ? 'Save' : 'Add' }}</button>
+            </div>
+          </div>
+        }
       </div>
     </div>
 

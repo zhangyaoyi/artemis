@@ -74,7 +74,8 @@
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     border: 1px solid rgba(203, 213, 225, 0.9);
     border-radius: 10px;
     padding: 8px 10px;
@@ -82,6 +83,7 @@
     font-family: inherit;
     color: #0f172a;
     resize: vertical;
+    background: #ffffff;
 
     &:focus {
       outline: none;
@@ -117,9 +119,10 @@
 .tpf-app-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px 6px;
   max-height: 160px;
   overflow-y: auto;
+  padding-top: 4px;
 }
 
 .tpf-app-chip {
@@ -146,6 +149,88 @@
   }
 }
 
+.tpf-app-chip-wrap {
+  position: relative;
+  display: inline-flex;
+
+  .tpf-chip-actions {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+
+    .tpf-chip-action-btn {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      border: 1px solid rgba(203, 213, 225, 0.9);
+      background: #ffffff;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+
+      span {
+        font-size: 11px;
+      }
+
+      &:hover {
+        border-color: rgba(26, 115, 232, 0.4);
+        color: #1a73e8;
+      }
+
+      &.tpf-chip-action-danger:hover {
+        border-color: rgba(220, 38, 38, 0.4);
+        color: #dc2626;
+      }
+    }
+  }
+
+  &:hover .tpf-chip-actions {
+    opacity: 1;
+  }
+}
+
+.tpf-add-app-chip {
+  border-style: dashed;
+  color: #64748b;
+
+  &:hover {
+    border-color: rgba(26, 115, 232, 0.55);
+    color: #1a73e8;
+  }
+}
+
+.tpf-app-mini-form {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .tpf-mini-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+
+.tpf-inline-error {
+  display: block;
+  color: #dc2626;
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
 .tpf-footer {
   display: flex;
   align-items: center;
@@ -169,37 +254,41 @@
     gap: 8px;
     margin-left: auto;
   }
+}
 
-  button {
-    padding: 8px 16px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1px solid transparent;
+// Shared secondary/primary buttons -- used in both the footer and the
+// inline app mini-form, so they live at the top level rather than nested
+// under .tpf-footer.
+.tpf-btn-secondary,
+.tpf-btn-primary {
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.tpf-btn-secondary {
+  background: #ffffff;
+  border-color: rgba(203, 213, 225, 0.9);
+  color: #475569;
+
+  &:hover {
+    background: #f8fafc;
+  }
+}
+
+.tpf-btn-primary {
+  background: #1a73e8;
+  color: #ffffff;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
-  .tpf-btn-secondary {
-    background: #ffffff;
-    border-color: rgba(203, 213, 225, 0.9);
-    color: #475569;
-
-    &:hover {
-      background: #f8fafc;
-    }
-  }
-
-  .tpf-btn-primary {
-    background: #1a73e8;
-    color: #ffffff;
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    &:hover:not(:disabled) {
-      background: #1558b8;
-    }
+  &:hover:not(:disabled) {
+    background: #1558b8;
   }
 }
