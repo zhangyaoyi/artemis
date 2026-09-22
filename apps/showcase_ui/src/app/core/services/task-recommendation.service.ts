@@ -14,21 +14,103 @@
  * limitations under the License.
  */
 
-import { Injectable } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, map, tap } from 'rxjs';
 import {
   AppReference,
   SmartSuggestion,
   SuggestionCategory,
-  APP_REGISTRY,
-  SMART_TASK_LIBRARY
+  APP_REGISTRY
 } from '../data/smart-tasks.data';
+
+export interface TaskPresetWritePayload {
+  title: string;
+  description: string;
+  goal: string;
+  profile: 'flash' | 'pro';
+  app_pkgs: string[];
+}
+
+interface RawTaskPreset {
+  id: string;
+  title: string;
+  description: string;
+  goal: string;
+  profile: 'flash' | 'pro';
+  category: 'flash' | 'pro' | 'cross_app' | 'monitor';
+  tag: string;
+  apps: AppReference[];
+  required_packages: string[];
+  match_mode: 'any' | 'all';
+  priority: number;
+  is_builtin: boolean;
+}
+
+function mapPreset(raw: RawTaskPreset): SmartSuggestion {
+  return {
+    id: raw.id,
+    title: raw.title,
+    description: raw.description,
+    goal: raw.goal,
+    profile: raw.profile,
+    category: raw.category,
+    tag: raw.tag,
+    apps: raw.apps,
+    requiredPackages: raw.required_packages,
+    matchMode: raw.match_mode,
+    priority: raw.priority,
+    isBuiltin: raw.is_builtin
+  };
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class TaskRecommendationService {
-  public readonly allTasks: SmartSuggestion[] = SMART_TASK_LIBRARY;
+  private http = inject(HttpClient);
+
   public readonly appRegistry = APP_REGISTRY;
+  public allTasks = signal<SmartSuggestion[]>([]);
+
+  constructor() {
+    this.loadTasks().subscribe();
+  }
+
+  /**
+   * Fetches the full task preset catalog from the backend and replaces
+   * `allTasks`. Called on service init and after every mutation.
+   */
+  public loadTasks(): Observable<{ tasks: RawTaskPreset[] }> {
+    return this.http.get<{ tasks: RawTaskPreset[] }>('/api/tasks/catalog').pipe(
+      tap({
+        next: (response) => this.allTasks.set(response.tasks.map(mapPreset)),
+        error: (err) => console.error('Failed to load task presets:', err)
+      })
+    );
+  }
+
+  public createTask(payload: TaskPresetWritePayload): Observable<SmartSuggestion> {
+    return this.http.post<RawTaskPreset>('/api/tasks/presets', payload).pipe(
+      tap(() => this.loadTasks().subscribe()),
+      map((raw) => mapPreset(raw))
+    );
+  }
+
+  public updateTask(id: string, payload: TaskPresetWritePayload): Observable<SmartSuggestion> {
+    return this.http.put<RawTaskPreset>(`/api/tasks/presets/${id}`, payload).pipe(
+      tap(() => this.loadTasks().subscribe()),
+      map((raw) => mapPreset(raw))
+    );
+  }
+
+  public deleteTask(id: string): Observable<{ status: string; id: string }> {
+    return this.http.delete<{ status: string; id: string }>(`/api/tasks/presets/${id}`).pipe(
+      tap({
+        next: () => this.loadTasks().subscribe()
+      })
+    );
+  }
 
   /**
    * Check if task matches any package installed on device
@@ -60,7 +142,7 @@ export class TaskRecommendationService {
     const hasDevice = installedPackages.size > 0;
 
     // 1. Score tasks: prioritize tasks whose apps are on the user's phone
-    const scored = this.allTasks.map(task => {
+    const scored = this.allTasks().map(task => {
       const isMatched = this.isSuggestionOnDevice(task, installedPackages);
       let score = task.priority ?? 50;
 
