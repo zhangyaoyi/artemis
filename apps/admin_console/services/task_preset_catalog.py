@@ -554,26 +554,51 @@ class TaskRecommendationEngine:
             )
         return apps
 
-    def _derive_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def _derive_app_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Compute the fields that legitimately change whenever the app
+        selection (or title/description/goal/profile) changes.
+
+        These are always safe to recompute from the submitted payload, for
+        both new presets (create_task) and edits to existing ones
+        (update_task).
+        """
         app_pkgs = payload["app_pkgs"]
         if not app_pkgs:
             raise ValueError("At least one app must be selected.")
         apps = self._resolve_apps(app_pkgs)
         profile = payload["profile"]
-        category = "cross_app" if len(app_pkgs) > 1 else profile
         tag = " + ".join(a.name for a in apps)
         return {
             "title": payload["title"],
             "description": payload["description"],
             "goal": payload["goal"],
             "profile": profile,
-            "category": category,
             "tag": tag,
             "apps": [a.model_dump() for a in apps],
             "required_packages": app_pkgs,
-            "match_mode": "any",
-            "priority": 60,
         }
+
+    def _derive_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Full field set for a BRAND NEW preset (create_task only).
+
+        In addition to the always-recomputed app fields, this derives
+        `category`, `match_mode`, and `priority` from scratch, which is the
+        correct behavior for a preset that doesn't exist yet. Editing an
+        existing preset must NOT go through this recomputation -- see
+        update_task, which only recomputes the app fields and leaves the
+        existing row's category/match_mode/priority untouched.
+        """
+        fields = self._derive_app_fields(payload)
+        app_pkgs = payload["app_pkgs"]
+        category = "cross_app" if len(app_pkgs) > 1 else fields["profile"]
+        fields.update(
+            {
+                "category": category,
+                "match_mode": "any",
+                "priority": 60,
+            }
+        )
+        return fields
 
     def create_task(self, payload: dict[str, Any]) -> dict[str, Any]:
         self._ensure_seeded()
@@ -590,7 +615,17 @@ class TaskRecommendationEngine:
 
     def update_task(self, preset_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
         self._ensure_seeded()
-        fields = self._derive_fields(payload)
+        # Only recompute the fields that legitimately change when the app
+        # selection/title/description/goal/profile are edited. Deliberately
+        # do NOT recompute category/match_mode/priority here (unlike
+        # create_task): those are curated per-preset (e.g. "all packages
+        # required" semantics, a hand-tuned priority, a specific catalog
+        # tab). Omitting them from `fields` means
+        # TaskPresetRepository.update() leaves those columns untouched in
+        # the database, so an edit -- even one that changes the app
+        # selection -- preserves the existing row's category, match_mode,
+        # and priority instead of silently resetting them.
+        fields = self._derive_app_fields(payload)
         fields["updated_at"] = datetime.now(timezone.utc).isoformat()
         return self.repository.update(preset_id, fields)
 

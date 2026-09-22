@@ -514,20 +514,28 @@ export class HomeComponent implements OnInit, OnDestroy {
   public showTaskModal = signal<boolean>(false);
   public editingTask = signal<SmartSuggestion | null>(null);
 
+  // Error shown inside the create/edit modal itself (the page-level
+  // errorMessage banner sits behind the modal's full-viewport overlay, so
+  // it's invisible while the modal is open).
+  public taskModalError = signal<string | null>(null);
+
   public openAddTaskModal(): void {
     this.editingTask.set(null);
+    this.taskModalError.set(null);
     this.showTaskModal.set(true);
   }
 
   public openEditTaskModal(item: SmartSuggestion, event: Event): void {
     event.stopPropagation();
     this.editingTask.set(item);
+    this.taskModalError.set(null);
     this.showTaskModal.set(true);
   }
 
   public closeTaskModal(): void {
     this.showTaskModal.set(false);
     this.editingTask.set(null);
+    this.taskModalError.set(null);
   }
 
   public saveTaskPreset(payload: TaskPresetWritePayload): void {
@@ -538,7 +546,13 @@ export class HomeComponent implements OnInit, OnDestroy {
     request$.subscribe({
       next: () => this.closeTaskModal(),
       error: (err) => {
-        this.errorMessage.set(err?.error?.detail || 'Failed to save task preset.');
+        const message = err?.error?.detail || 'Failed to save task preset.';
+        this.errorMessage.set(message);
+        this.taskModalError.set(message);
+        // The row may already be gone (e.g. deleted in another tab, 404 on
+        // update) or the catalog may otherwise be stale -- refresh so the
+        // grid self-corrects instead of showing a stale card.
+        this.taskRecService.loadTasks().subscribe();
       }
     });
   }
@@ -551,6 +565,9 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.taskRecService.deleteTask(item.id).subscribe({
       error: (err) => {
         this.errorMessage.set(err?.error?.detail || 'Failed to delete task preset.');
+        // Same self-correction as above: a 404 here means the row was
+        // already deleted elsewhere, so re-sync the catalog.
+        this.taskRecService.loadTasks().subscribe();
       }
     });
   }
@@ -561,6 +578,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   private focusListener = () => {
     // Silently re-check environment when user returns to the browser tab
     this.systemService.fetchReadiness().subscribe();
+    // Also retry the Recommended Tasks catalog load: if the initial load
+    // failed (e.g. backend still starting up), returning to the tab is a
+    // natural moment to try again since it's already the established retry
+    // trigger for readiness above.
+    this.taskRecService.loadTasks().subscribe();
   };
 
   constructor() {
@@ -583,6 +605,15 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.loadProTuningDefaults();
     // Initial fetch of system readiness & model configuration
     this.systemService.fetchReadiness().subscribe();
+    // Retry the Recommended Tasks catalog load on component init. The
+    // service already fetches it once from its constructor, but that
+    // request can fail (e.g. backend still starting up) and the service
+    // has no retry of its own -- a failed one-shot load would otherwise
+    // leave `allTasks` permanently empty. This is a second, independent
+    // attempt; loadTasks() is idempotent (it just replaces `allTasks` with
+    // whatever the server returns), so a redundant successful fetch here is
+    // harmless.
+    this.taskRecService.loadTasks().subscribe();
     this.systemService.fetchModelConfigEnv().subscribe({
       next: cfg => {
         // Preselect the setup mode that matches the configured default provider.

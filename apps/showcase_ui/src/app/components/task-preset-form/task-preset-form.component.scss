@@ -148,10 +148,27 @@
 
 .tpf-footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 14px 18px;
   border-top: 1px solid rgba(226, 232, 240, 0.85);
+
+  .tpf-error {
+    flex: 1 1 auto;
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-right: auto;
+  }
+
+  .tpf-footer-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
 
   button {
     padding: 8px 16px;

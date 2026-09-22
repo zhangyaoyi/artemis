@@ -2113,6 +2113,7 @@
         @if (showTaskModal()) {
           <app-task-preset-form
             [editingTask]="editingTask()"
+            [errorText]="taskModalError()"
             (save)="saveTaskPreset($event)"
             (cancel)="closeTaskModal()"
           ></app-task-preset-form>

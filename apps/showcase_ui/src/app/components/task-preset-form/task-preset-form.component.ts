@@ -28,6 +28,7 @@ import { TaskPresetWritePayload, TaskRecommendationService } from '../../core/se
 })
 export class TaskPresetFormComponent implements OnChanges {
   @Input() editingTask: SmartSuggestion | null = null;
+  @Input() errorText: string | null = null;
   @Output() save = new EventEmitter<TaskPresetWritePayload>();
   @Output() cancel = new EventEmitter<void>();
 

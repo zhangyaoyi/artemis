@@ -50,8 +50,13 @@
     </div>
 
     <div class="tpf-footer">
-      <button type="button" class="tpf-btn-secondary" (click)="onCancel()">Cancel</button>
-      <button type="button" class="tpf-btn-primary" [disabled]="!isValid" (click)="onSave()">Save</button>
+      @if (errorText) {
+        <span class="tpf-error">{{ errorText }}</span>
+      }
+      <div class="tpf-footer-actions">
+        <button type="button" class="tpf-btn-secondary" (click)="onCancel()">Cancel</button>
+        <button type="button" class="tpf-btn-primary" [disabled]="!isValid" (click)="onSave()">Save</button>
+      </div>
     </div>
   </div>
 </div>
