@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 import pytest
 
+from apps.admin_console.database.repositories.app_repository import AppRepository
 from apps.admin_console.database.repositories.task_preset_repository import (
     TaskPresetRepository,
 )
@@ -12,7 +13,8 @@ from apps.admin_console.services.task_preset_catalog import TaskRecommendationEn
 @pytest.fixture
 def engine(tmp_path, monkeypatch):
     repo = TaskPresetRepository(tmp_path / "presets.db")
-    test_engine = TaskRecommendationEngine(repository=repo)
+    apps_repo = AppRepository(tmp_path / "apps.db")
+    test_engine = TaskRecommendationEngine(repository=repo, app_repository=apps_repo)
     monkeypatch.setattr(tasks, "task_recommendation_engine", test_engine)
     return test_engine
 

@@ -1,5 +1,6 @@
 import pytest
 
+from apps.admin_console.database.repositories.app_repository import AppRepository
 from apps.admin_console.database.repositories.task_preset_repository import (
     TaskPresetRepository,
 )
@@ -8,7 +9,8 @@ from apps.admin_console.services.task_preset_catalog import TaskRecommendationEn
 
 def _engine(tmp_path):
     repo = TaskPresetRepository(tmp_path / "presets.db")
-    return TaskRecommendationEngine(repository=repo)
+    apps_repo = AppRepository(tmp_path / "apps.db")
+    return TaskRecommendationEngine(repository=repo, app_repository=apps_repo)
 
 
 def test_get_all_tasks_seeds_the_builtin_presets(tmp_path):
@@ -226,3 +228,114 @@ def test_create_task_still_derives_category_match_mode_and_priority_fresh(tmp_pa
     assert created["category"] == "flash"
     assert created["match_mode"] == "any"
     assert created["priority"] == 60
+
+
+def test_get_apps_seeds_the_builtin_app_registry(tmp_path):
+    from apps.admin_console.services.task_preset_catalog import APP_REGISTRY
+
+    engine = _engine(tmp_path)
+
+    apps = engine.get_apps()
+
+    assert len(apps) == len(APP_REGISTRY)
+    assert all(a["is_builtin"] is True for a in apps)
+
+
+def test_get_app_registry_returns_legacy_dict_shape(tmp_path):
+    engine = _engine(tmp_path)
+
+    registry = engine.get_app_registry()
+
+    assert registry["com.android.chrome"]["name"] == "Chrome"
+
+
+def test_create_app_adds_a_new_selectable_app(tmp_path):
+    engine = _engine(tmp_path)
+
+    created = engine.create_app(
+        {"pkg": "com.example.newapp", "name": "New App", "icon": "star", "category": "tools"}
+    )
+
+    assert created["pkg"] == "com.example.newapp"
+    assert created["is_builtin"] is False
+
+    task = engine.create_task(
+        {
+            "title": "Use New App",
+            "description": "d",
+            "goal": "g",
+            "profile": "flash",
+            "app_pkgs": ["com.example.newapp"],
+        }
+    )
+    assert task["required_packages"] == ["com.example.newapp"]
+
+
+def test_create_app_returns_none_for_duplicate_pkg(tmp_path):
+    engine = _engine(tmp_path)
+    engine.create_app({"pkg": "com.example.newapp", "name": "New App", "icon": "star", "category": "tools"})
+
+    assert (
+        engine.create_app(
+            {"pkg": "com.example.newapp", "name": "Different", "icon": "star", "category": "tools"}
+        )
+        is None
+    )
+
+
+def test_update_app_returns_none_for_missing_pkg(tmp_path):
+    engine = _engine(tmp_path)
+
+    assert engine.update_app("does.not.exist", {"name": "X", "icon": "star", "category": "tools"}) is None
+
+
+def test_update_app_changes_name_icon_category(tmp_path):
+    engine = _engine(tmp_path)
+    engine.create_app({"pkg": "com.example.newapp", "name": "Orig", "icon": "star", "category": "tools"})
+
+    updated = engine.update_app(
+        "com.example.newapp", {"name": "Renamed", "icon": "explore", "category": "tools"}
+    )
+
+    assert updated["name"] == "Renamed"
+    assert updated["icon"] == "explore"
+
+
+def test_delete_app_succeeds_when_unreferenced(tmp_path):
+    engine = _engine(tmp_path)
+    engine.get_apps()  # trigger app seeding
+
+    # com.google.android.calendar is not in any PRESET_TASK_CATALOG entry's
+    # required_packages, so it's safe to delete.
+    deleted, blocking = engine.delete_app("com.google.android.calendar")
+
+    assert deleted is True
+    assert blocking == 0
+
+
+def test_delete_app_blocked_when_referenced_by_a_task_preset(tmp_path):
+    engine = _engine(tmp_path)
+    engine.get_all_tasks()  # trigger task seeding; "maps_coffee" references this pkg
+
+    deleted, blocking = engine.delete_app("com.google.android.apps.maps")
+
+    assert deleted is False
+    assert blocking > 0
+
+
+def test_resolve_apps_rejects_unknown_package_via_app_repository(tmp_path):
+    engine = _engine(tmp_path)
+
+    try:
+        engine.create_task(
+            {
+                "title": "Bad",
+                "description": "d",
+                "goal": "g",
+                "profile": "flash",
+                "app_pkgs": ["com.totally.unknown"],
+            }
+        )
+        assert False, "expected ValueError"
+    except ValueError as exc:
+        assert "com.totally.unknown" in str(exc)

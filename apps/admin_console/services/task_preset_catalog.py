@@ -31,6 +31,17 @@ except ImportError:
         task_preset_repository,
     )
 
+try:
+    from admin_console.database.repositories.app_repository import (
+        AppRepository,
+        app_repository as default_app_repository,
+    )
+except ImportError:
+    from apps.admin_console.database.repositories.app_repository import (
+        AppRepository,
+        app_repository as default_app_repository,
+    )
+
 
 class AppInfo(BaseModel):
     """Application metadata."""
@@ -472,12 +483,36 @@ def _builtin_seed_rows() -> list[dict[str, Any]]:
     return rows
 
 
+def _builtin_app_seed_rows() -> list[dict[str, Any]]:
+    now = datetime.now(timezone.utc).isoformat()
+    rows = []
+    for pkg, info in APP_REGISTRY.items():
+        rows.append(
+            {
+                "pkg": pkg,
+                "name": info["name"],
+                "icon": info["icon"],
+                "category": info.get("category", "general"),
+                "is_builtin": True,
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+    return rows
+
+
 class TaskRecommendationEngine:
     """Intelligent recommendation engine matching device capabilities."""
 
-    def __init__(self, repository: TaskPresetRepository | None = None):
+    def __init__(
+        self,
+        repository: TaskPresetRepository | None = None,
+        app_repository: AppRepository | None = None,
+    ):
         self.repository = repository or task_preset_repository
+        self.app_repository = app_repository or default_app_repository
         self._seeded = False
+        self._apps_seeded = False
 
     def _ensure_seeded(self) -> None:
         if self._seeded:
@@ -485,12 +520,30 @@ class TaskRecommendationEngine:
         self.repository.seed_if_empty(_builtin_seed_rows())
         self._seeded = True
 
+    def _ensure_apps_seeded(self) -> None:
+        if self._apps_seeded:
+            return
+        self.app_repository.seed_if_empty(_builtin_app_seed_rows())
+        self._apps_seeded = True
+
     def get_all_tasks(self) -> list[dict[str, Any]]:
         self._ensure_seeded()
         return self.repository.list_all()
 
     def get_app_registry(self) -> dict[str, dict[str, str]]:
-        return APP_REGISTRY
+        self._ensure_apps_seeded()
+        return {
+            row["pkg"]: {
+                "name": row["name"],
+                "icon": row["icon"],
+                "category": row["category"],
+            }
+            for row in self.app_repository.list_all()
+        }
+
+    def get_apps(self) -> list[dict[str, Any]]:
+        self._ensure_apps_seeded()
+        return self.app_repository.list_all()
 
     def recommend_tasks(
         self, installed_packages: list[str] | set[str], category: str = "all", limit: int = 12
@@ -544,13 +597,14 @@ class TaskRecommendationEngine:
         return results
 
     def _resolve_apps(self, app_pkgs: list[str]) -> list[AppInfo]:
+        self._ensure_apps_seeded()
         apps = []
         for pkg in app_pkgs:
-            info = APP_REGISTRY.get(pkg)
-            if not info:
+            row = self.app_repository.get(pkg)
+            if not row:
                 raise ValueError(f"Unknown app package: {pkg}")
             apps.append(
-                AppInfo(name=info["name"], icon=info["icon"], pkg=pkg, category=info.get("category", "general"))
+                AppInfo(name=row["name"], icon=row["icon"], pkg=pkg, category=row.get("category", "general"))
             )
         return apps
 
@@ -632,6 +686,45 @@ class TaskRecommendationEngine:
     def delete_task(self, preset_id: str) -> bool:
         self._ensure_seeded()
         return self.repository.delete(preset_id)
+
+    def create_app(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+        self._ensure_apps_seeded()
+        now = datetime.now(timezone.utc).isoformat()
+        row = {
+            "pkg": payload["pkg"],
+            "name": payload["name"],
+            "icon": payload["icon"],
+            "category": payload.get("category") or "general",
+            "is_builtin": False,
+            "created_at": now,
+            "updated_at": now,
+        }
+        return self.app_repository.create(row)
+
+    def update_app(self, pkg: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        self._ensure_apps_seeded()
+        fields = {
+            "name": payload["name"],
+            "icon": payload["icon"],
+            "category": payload.get("category") or "general",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        return self.app_repository.update(pkg, fields)
+
+    def delete_app(self, pkg: str) -> tuple[bool, int]:
+        """Delete an app unless a task preset still references it.
+
+        Returns (deleted, blocking_count). blocking_count > 0 means the
+        delete was refused because that many task presets still list this
+        pkg in their required_packages.
+        """
+        self._ensure_seeded()
+        referencing = [
+            row for row in self.repository.list_all() if pkg in row["required_packages"]
+        ]
+        if referencing:
+            return False, len(referencing)
+        return self.app_repository.delete(pkg), 0
 
 
 task_recommendation_engine = TaskRecommendationEngine()
