@@ -30,7 +30,8 @@ import {
   SmartSuggestion,
   SuggestionCategory
 } from '../../core/data/smart-tasks.data';
-import { TaskRecommendationService } from '../../core/services/task-recommendation.service';
+import { TaskPresetWritePayload, TaskRecommendationService } from '../../core/services/task-recommendation.service';
+import { TaskPresetFormComponent } from '../../components/task-preset-form/task-preset-form.component';
 import {
   DEFAULT_EXPLORER_MODE,
   DEFAULT_VERIFICATION_LEVEL,
@@ -103,7 +104,7 @@ type AdbGuideTab = 'emulator' | 'usb' | 'wifi' | 'remote';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, TaskPresetFormComponent],
   templateUrl: './home.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './home.component.scss'
@@ -488,9 +489,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     return this.ocrKeyInput().trim() !== this.savedOcrKey().trim();
   });
 
-  // Rich Smart Suggestions Library (Device-Aware, Flash vs Pro Tailored)
-  public readonly allSuggestions = this.taskRecService.allTasks;
-
   // Suggestion category filter & shuffle state
   public selectedCategory = signal<SuggestionCategory>('all');
   public shuffleOffset = signal<number>(0);
@@ -511,6 +509,51 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.shuffleOffset()
     );
   });
+
+  // Recommended Tasks CRUD modal state
+  public showTaskModal = signal<boolean>(false);
+  public editingTask = signal<SmartSuggestion | null>(null);
+
+  public openAddTaskModal(): void {
+    this.editingTask.set(null);
+    this.showTaskModal.set(true);
+  }
+
+  public openEditTaskModal(item: SmartSuggestion, event: Event): void {
+    event.stopPropagation();
+    this.editingTask.set(item);
+    this.showTaskModal.set(true);
+  }
+
+  public closeTaskModal(): void {
+    this.showTaskModal.set(false);
+    this.editingTask.set(null);
+  }
+
+  public saveTaskPreset(payload: TaskPresetWritePayload): void {
+    const editing = this.editingTask();
+    const request$ = editing
+      ? this.taskRecService.updateTask(editing.id, payload)
+      : this.taskRecService.createTask(payload);
+    request$.subscribe({
+      next: () => this.closeTaskModal(),
+      error: (err) => {
+        this.errorMessage.set(err?.error?.detail || 'Failed to save task preset.');
+      }
+    });
+  }
+
+  public deleteTaskPreset(item: SmartSuggestion, event: Event): void {
+    event.stopPropagation();
+    if (!confirm(`Delete "${item.title}"?`)) {
+      return;
+    }
+    this.taskRecService.deleteTask(item.id).subscribe({
+      error: (err) => {
+        this.errorMessage.set(err?.error?.detail || 'Failed to delete task preset.');
+      }
+    });
+  }
 
 
 

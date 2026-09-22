@@ -2048,6 +2048,11 @@
 
           <!-- Suggestions Grid -->
           <div class="suggestions-cards-grid">
+            <button type="button" class="add-task-card" (click)="openAddTaskModal()">
+              <span class="material-symbols-outlined add-task-icon">add</span>
+              <span>Add Task</span>
+            </button>
+
             @for (item of filteredSuggestions(); track item.id) {
               <div
                 class="suggestion-card"
@@ -2055,6 +2060,15 @@
                 [class.is-flash-card]="item.profile === 'flash'"
                 (click)="applySuggestion(item)"
               >
+                <div class="card-hover-actions">
+                  <button type="button" class="card-action-btn" title="Edit" (click)="openEditTaskModal(item, $event)">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="card-action-btn card-action-danger" title="Delete" (click)="deleteTaskPreset(item, $event)">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </div>
+
                 <!-- Top Row: App Icon + Name + Mode Badge -->
                 <div class="card-top-row">
                   <div class="app-icons-cluster">
@@ -2066,10 +2080,15 @@
                     <span class="app-names-label">{{ getAppNamesDisplay(item.apps) }}</span>
                   </div>
 
-                  <span class="mode-badge" [class.mode-pro]="item.profile === 'pro'" [class.mode-flash]="item.profile === 'flash'"
-                    [title]="item.profile === 'pro' ? 'Uses ARTEMIS Pro (Multi-Agent Cognitive State Graph)' : 'Uses ARTEMIS Flash (Reactive Fast Loop)'">
-                    {{ item.profile === 'pro' ? 'Pro' : 'Flash' }}
-                  </span>
+                  <div class="badges-wrap">
+                    @if (item.isBuiltin) {
+                      <span class="builtin-badge" title="Built-in preset">Built-in</span>
+                    }
+                    <span class="mode-badge" [class.mode-pro]="item.profile === 'pro'" [class.mode-flash]="item.profile === 'flash'"
+                      [title]="item.profile === 'pro' ? 'Uses ARTEMIS Pro (Multi-Agent Cognitive State Graph)' : 'Uses ARTEMIS Flash (Reactive Fast Loop)'">
+                      {{ item.profile === 'pro' ? 'Pro' : 'Flash' }}
+                    </span>
+                  </div>
                 </div>
 
                 <!-- Middle Content: Title + Description -->
@@ -2090,6 +2109,14 @@
             }
           </div>
         </div>
+
+        @if (showTaskModal()) {
+          <app-task-preset-form
+            [editingTask]="editingTask()"
+            (save)="saveTaskPreset($event)"
+            (cancel)="closeTaskModal()"
+          ></app-task-preset-form>
+        }
 
 
       </section>

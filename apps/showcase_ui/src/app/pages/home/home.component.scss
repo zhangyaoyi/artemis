@@ -4858,6 +4858,45 @@ $text-light: #94a3b8;
               transform: scale(0.985);
             }
 
+            .card-hover-actions {
+              position: absolute;
+              top: 10px;
+              right: 10px;
+              display: flex;
+              gap: 4px;
+              opacity: 0;
+              transition: opacity 0.15s ease;
+              z-index: 2;
+
+              .card-action-btn {
+                width: 24px;
+                height: 24px;
+                border-radius: 7px;
+                border: 1px solid rgba(226, 232, 240, 0.9);
+                background: rgba(255, 255, 255, 0.92);
+                color: #475569;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+
+                span {
+                  font-size: 14px;
+                }
+
+                &:hover {
+                  background: #ffffff;
+                  border-color: rgba(191, 219, 254, 0.95);
+                  color: #1a73e8;
+                }
+
+                &.card-action-danger:hover {
+                  border-color: rgba(254, 202, 202, 0.95);
+                  color: #ef4444;
+                }
+              }
+            }
+
             .card-top-row {
               display: flex;
               align-items: center;
@@ -4915,6 +4954,24 @@ $text-light: #94a3b8;
                   background: rgba(99, 102, 241, 0.12);
                   color: #6366f1;
                   border: 1px solid rgba(99, 102, 241, 0.25);
+                }
+              }
+
+              .badges-wrap {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-shrink: 0;
+
+                .builtin-badge {
+                  padding: 2px 7px;
+                  border-radius: 8px;
+                  font-size: 10px;
+                  font-weight: 700;
+                  line-height: 1.2;
+                  background: rgba(100, 116, 139, 0.12);
+                  color: #64748b;
+                  border: 1px solid rgba(100, 116, 139, 0.2);
                 }
               }
             }
@@ -4986,6 +5043,37 @@ $text-light: #94a3b8;
               .action-arrow {
                 transform: translateX(2px);
               }
+            }
+
+            &:hover .card-hover-actions {
+              opacity: 1;
+            }
+          }
+
+          .add-task-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 128px;
+            border-radius: 16px;
+            border: 1.5px dashed rgba(148, 163, 184, 0.55);
+            background: rgba(248, 250, 252, 0.6);
+            color: #64748b;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+
+            .add-task-icon {
+              font-size: 22px;
+            }
+
+            &:hover {
+              border-color: rgba(26, 115, 232, 0.55);
+              color: #1a73e8;
+              background: rgba(255, 255, 255, 0.9);
             }
           }
         }
