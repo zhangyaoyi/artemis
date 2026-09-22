@@ -20,8 +20,7 @@ import { Observable, map, tap } from 'rxjs';
 import {
   AppReference,
   SmartSuggestion,
-  SuggestionCategory,
-  APP_REGISTRY
+  SuggestionCategory
 } from '../data/smart-tasks.data';
 
 export interface TaskPresetWritePayload {
@@ -70,7 +69,6 @@ function mapPreset(raw: RawTaskPreset): SmartSuggestion {
 export class TaskRecommendationService {
   private http = inject(HttpClient);
 
-  public readonly appRegistry = APP_REGISTRY;
   public allTasks = signal<SmartSuggestion[]>([]);
 
   constructor() {
