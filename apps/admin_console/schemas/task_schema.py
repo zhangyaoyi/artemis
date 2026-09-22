@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class RunRequest(BaseModel):
@@ -45,3 +47,11 @@ class StopRequest(BaseModel):
     session_id: str | None = None
     device_id: str | None = None
     all: bool = False
+
+
+class TaskPresetWrite(BaseModel):
+    title: str
+    description: str
+    goal: str
+    profile: Literal["flash", "pro"]
+    app_pkgs: list[str] = Field(default_factory=list)

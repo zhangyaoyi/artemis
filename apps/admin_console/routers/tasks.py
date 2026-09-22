@@ -25,7 +25,7 @@ from artemis.runtime import DeviceExecutionLock, device_pool
 try:
     from admin_console.core.state import state
     from admin_console.database.repositories.session_repository import session_repo
-    from admin_console.schemas.task_schema import RunRequest
+    from admin_console.schemas.task_schema import RunRequest, TaskPresetWrite
     from admin_console.services.ipc_service import ipc_service
     from admin_console.services.model_service import model_service
     from admin_console.services.task_preset_catalog import task_recommendation_engine
@@ -33,7 +33,7 @@ try:
 except ImportError:
     from apps.admin_console.core.state import state
     from apps.admin_console.database.repositories.session_repository import session_repo
-    from apps.admin_console.schemas.task_schema import RunRequest
+    from apps.admin_console.schemas.task_schema import RunRequest, TaskPresetWrite
     from apps.admin_console.services.ipc_service import ipc_service
     from apps.admin_console.services.model_service import model_service
     from apps.admin_console.services.task_preset_catalog import task_recommendation_engine
@@ -62,9 +62,39 @@ async def get_task_presets(
 async def get_task_catalog():
     """Retrieve full catalog of predefined tasks and app package registry."""
     return {
-        "tasks": [t.model_dump() for t in task_recommendation_engine.get_all_tasks()],
+        "tasks": task_recommendation_engine.get_all_tasks(),
         "app_registry": task_recommendation_engine.get_app_registry(),
     }
+
+
+@router.post("/api/tasks/presets")
+async def create_task_preset(request: TaskPresetWrite):
+    """Create a new user-defined Recommended Task preset."""
+    try:
+        return task_recommendation_engine.create_task(request.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.put("/api/tasks/presets/{preset_id}")
+async def update_task_preset(preset_id: str, request: TaskPresetWrite):
+    """Replace the editable fields of an existing Recommended Task preset."""
+    try:
+        updated = task_recommendation_engine.update_task(preset_id, request.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if updated is None:
+        raise HTTPException(status_code=404, detail=f"Task preset '{preset_id}' not found.")
+    return updated
+
+
+@router.delete("/api/tasks/presets/{preset_id}")
+async def delete_task_preset(preset_id: str):
+    """Delete a Recommended Task preset (built-in or user-created)."""
+    deleted = task_recommendation_engine.delete_task(preset_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Task preset '{preset_id}' not found.")
+    return {"status": "deleted", "id": preset_id}
 
 
 @router.post("/api/run")
