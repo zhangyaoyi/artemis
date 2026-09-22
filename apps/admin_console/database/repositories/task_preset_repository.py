@@ -94,6 +94,14 @@ class TaskPresetRepository:
             cursor = conn.execute("SELECT * FROM task_presets ORDER BY priority DESC")
             return [self._decode_row(row) for row in cursor.fetchall()]
 
+    def get(self, preset_id: str) -> dict[str, Any] | None:
+        with db_session(self.db_path) as conn:
+            self._ensure_table(conn)
+            row = conn.execute(
+                "SELECT * FROM task_presets WHERE id = ?", (preset_id,)
+            ).fetchone()
+        return self._decode_row(row) if row else None
+
     def create(self, row: dict[str, Any]) -> dict[str, Any]:
         with db_session(self.db_path) as conn:
             self._ensure_table(conn)

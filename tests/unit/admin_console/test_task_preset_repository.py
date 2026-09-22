@@ -77,3 +77,20 @@ def test_seed_if_empty_only_seeds_once(tmp_path):
 
     repo.seed_if_empty([_row("3")])
     assert len(repo.list_all()) == 2
+
+
+def test_get_returns_none_for_missing_id(tmp_path):
+    repo = TaskPresetRepository(tmp_path / "presets.db")
+    assert repo.get("does-not-exist") is None
+
+
+def test_get_returns_existing_row(tmp_path):
+    repo = TaskPresetRepository(tmp_path / "presets.db")
+    repo.create(_row())
+
+    row = repo.get("task-1")
+
+    assert row["title"] == "Test Task"
+    assert row["apps"] == [
+        {"name": "Test App", "icon": "star", "pkg": "com.test.app", "category": "tools"}
+    ]
