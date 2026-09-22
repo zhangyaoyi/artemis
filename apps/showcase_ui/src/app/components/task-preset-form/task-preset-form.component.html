@@ -1,0 +1,57 @@
+<div class="tpf-overlay" (click)="onCancel()">
+  <div class="tpf-modal" (click)="$event.stopPropagation()">
+    <div class="tpf-header">
+      <h3>{{ editingTask ? 'Edit Task' : 'Add Task' }}</h3>
+      <button type="button" class="tpf-close-btn" (click)="onCancel()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="tpf-body">
+      <label class="tpf-field">
+        <span class="tpf-label">Title</span>
+        <input type="text" [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="e.g. Find Specialty Coffee" />
+      </label>
+
+      <label class="tpf-field">
+        <span class="tpf-label">Description</span>
+        <input type="text" [ngModel]="description()" (ngModelChange)="description.set($event)" placeholder="Short summary shown on the card" />
+      </label>
+
+      <label class="tpf-field">
+        <span class="tpf-label">Goal Prompt</span>
+        <textarea rows="3" [ngModel]="goal()" (ngModelChange)="goal.set($event)" placeholder="The instruction sent to the agent"></textarea>
+      </label>
+
+      <div class="tpf-field">
+        <span class="tpf-label">Profile</span>
+        <div class="tpf-profile-toggle">
+          <button type="button" [class.active]="profile() === 'flash'" (click)="profile.set('flash')">Flash</button>
+          <button type="button" [class.active]="profile() === 'pro'" (click)="profile.set('pro')">Pro</button>
+        </div>
+      </div>
+
+      <div class="tpf-field">
+        <span class="tpf-label">Apps</span>
+        <div class="tpf-app-chips">
+          @for (entry of appRegistryEntries; track entry[0]) {
+            <button
+              type="button"
+              class="tpf-app-chip"
+              [class.selected]="isPkgSelected(entry[0])"
+              (click)="togglePkg(entry[0])"
+            >
+              <span class="material-symbols-outlined">{{ entry[1].icon }}</span>
+              <span>{{ entry[1].name }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="tpf-footer">
+      <button type="button" class="tpf-btn-secondary" (click)="onCancel()">Cancel</button>
+      <button type="button" class="tpf-btn-primary" [disabled]="!isValid" (click)="onSave()">Save</button>
+    </div>
+  </div>
+</div>
