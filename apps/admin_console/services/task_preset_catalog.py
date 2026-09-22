@@ -17,6 +17,20 @@
 from typing import Any, Literal
 from pydantic import BaseModel, Field
 
+from datetime import datetime, timezone
+import uuid
+
+try:
+    from admin_console.database.repositories.task_preset_repository import (
+        TaskPresetRepository,
+        task_preset_repository,
+    )
+except ImportError:
+    from apps.admin_console.database.repositories.task_preset_repository import (
+        TaskPresetRepository,
+        task_preset_repository,
+    )
+
 
 class AppInfo(BaseModel):
     """Application metadata."""
@@ -446,69 +460,143 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
 # ============================================================================
 
 
+def _builtin_seed_rows() -> list[dict[str, Any]]:
+    now = datetime.now(timezone.utc).isoformat()
+    rows = []
+    for task in PRESET_TASK_CATALOG:
+        row = task.model_dump()
+        row["is_builtin"] = True
+        row["created_at"] = now
+        row["updated_at"] = now
+        rows.append(row)
+    return rows
+
+
 class TaskRecommendationEngine:
     """Intelligent recommendation engine matching device capabilities."""
 
-    def __init__(self, catalog: list[TaskPreset] | None = None):
-        self.catalog = catalog or PRESET_TASK_CATALOG
+    def __init__(self, repository: TaskPresetRepository | None = None):
+        self.repository = repository or task_preset_repository
+        self._seeded = False
+
+    def _ensure_seeded(self) -> None:
+        if self._seeded:
+            return
+        self.repository.seed_if_empty(_builtin_seed_rows())
+        self._seeded = True
 
     def get_all_tasks(self) -> list[dict[str, Any]]:
-        return [task.model_dump() for task in self.catalog]
+        self._ensure_seeded()
+        return self.repository.list_all()
+
+    def get_app_registry(self) -> dict[str, dict[str, str]]:
+        return APP_REGISTRY
 
     def recommend_tasks(
         self, installed_packages: list[str] | set[str], category: str = "all", limit: int = 12
     ) -> list[dict[str, Any]]:
+        self._ensure_seeded()
         pkgs_set = (
             set(installed_packages) if isinstance(installed_packages, list) else installed_packages
-        )
+        ) or set()
 
-        scored_tasks: list[tuple[int, TaskPreset, bool]] = []
+        scored_tasks: list[tuple[int, dict[str, Any], bool]] = []
 
-        for task in self.catalog:
-            # Check package presence
+        for row in self.repository.list_all():
+            required_packages = row["required_packages"]
             is_matched = False
             if pkgs_set:
-                if not task.required_packages:
+                if not required_packages:
                     is_matched = True
-                elif task.match_mode == "all":
-                    is_matched = all(pkg in pkgs_set for pkg in task.required_packages)
+                elif row["match_mode"] == "all":
+                    is_matched = all(pkg in pkgs_set for pkg in required_packages)
                 else:
-                    is_matched = any(pkg in pkgs_set for pkg in task.required_packages)
-            else:
-                is_matched = False
+                    is_matched = any(pkg in pkgs_set for pkg in required_packages)
 
-            # Calculate score
-            score = task.priority
+            score = row["priority"]
             if pkgs_set:
                 if is_matched:
                     score += 100
-                    if len(task.required_packages) > 1 and task.match_mode == "all":
+                    if len(required_packages) > 1 and row["match_mode"] == "all":
                         score += 30
                 else:
                     score -= 40
 
-            # Filter by category
-            if category == "flash" and task.profile != "flash":
+            if category == "flash" and row["profile"] != "flash":
                 continue
-            elif category == "pro" and task.profile != "pro":
+            elif category == "pro" and row["profile"] != "pro":
                 continue
-            elif category == "cross_app" and task.category != "cross_app":
+            elif category == "cross_app" and row["category"] != "cross_app":
                 continue
-            elif category == "monitor" and task.category != "monitor":
+            elif category == "monitor" and row["category"] != "monitor":
                 continue
 
-            scored_tasks.append((score, task, is_matched))
+            scored_tasks.append((score, row, is_matched))
 
-        # Sort descending by score
         scored_tasks.sort(key=lambda item: item[0], reverse=True)
 
         results: list[dict[str, Any]] = []
-        for _, task, matched in scored_tasks[:limit]:
-            d = task.model_dump()
+        for _, row, matched in scored_tasks[:limit]:
+            d = dict(row)
             d["is_device_matched"] = matched
             results.append(d)
 
         return results
+
+    def _resolve_apps(self, app_pkgs: list[str]) -> list[AppInfo]:
+        apps = []
+        for pkg in app_pkgs:
+            info = APP_REGISTRY.get(pkg)
+            if not info:
+                raise ValueError(f"Unknown app package: {pkg}")
+            apps.append(
+                AppInfo(name=info["name"], icon=info["icon"], pkg=pkg, category=info.get("category", "general"))
+            )
+        return apps
+
+    def _derive_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
+        app_pkgs = payload["app_pkgs"]
+        if not app_pkgs:
+            raise ValueError("At least one app must be selected.")
+        apps = self._resolve_apps(app_pkgs)
+        profile = payload["profile"]
+        category = "cross_app" if len(app_pkgs) > 1 else profile
+        tag = " + ".join(a.name for a in apps)
+        return {
+            "title": payload["title"],
+            "description": payload["description"],
+            "goal": payload["goal"],
+            "profile": profile,
+            "category": category,
+            "tag": tag,
+            "apps": [a.model_dump() for a in apps],
+            "required_packages": app_pkgs,
+            "match_mode": "any",
+            "priority": 60,
+        }
+
+    def create_task(self, payload: dict[str, Any]) -> dict[str, Any]:
+        self._ensure_seeded()
+        fields = self._derive_fields(payload)
+        now = datetime.now(timezone.utc).isoformat()
+        row = {
+            "id": str(uuid.uuid4()),
+            **fields,
+            "is_builtin": False,
+            "created_at": now,
+            "updated_at": now,
+        }
+        return self.repository.create(row)
+
+    def update_task(self, preset_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        self._ensure_seeded()
+        fields = self._derive_fields(payload)
+        fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+        return self.repository.update(preset_id, fields)
+
+    def delete_task(self, preset_id: str) -> bool:
+        self._ensure_seeded()
+        return self.repository.delete(preset_id)
 
 
 task_recommendation_engine = TaskRecommendationEngine()
