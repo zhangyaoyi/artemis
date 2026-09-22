@@ -25,7 +25,7 @@ from artemis.runtime import DeviceExecutionLock, device_pool
 try:
     from admin_console.core.state import state
     from admin_console.database.repositories.session_repository import session_repo
-    from admin_console.schemas.task_schema import RunRequest, TaskPresetWrite
+    from admin_console.schemas.task_schema import AppCreate, AppUpdate, RunRequest, TaskPresetWrite
     from admin_console.services.ipc_service import ipc_service
     from admin_console.services.model_service import model_service
     from admin_console.services.task_preset_catalog import task_recommendation_engine
@@ -33,7 +33,7 @@ try:
 except ImportError:
     from apps.admin_console.core.state import state
     from apps.admin_console.database.repositories.session_repository import session_repo
-    from apps.admin_console.schemas.task_schema import RunRequest, TaskPresetWrite
+    from apps.admin_console.schemas.task_schema import AppCreate, AppUpdate, RunRequest, TaskPresetWrite
     from apps.admin_console.services.ipc_service import ipc_service
     from apps.admin_console.services.model_service import model_service
     from apps.admin_console.services.task_preset_catalog import task_recommendation_engine
@@ -95,6 +95,41 @@ async def delete_task_preset(preset_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Task preset '{preset_id}' not found.")
     return {"status": "deleted", "id": preset_id}
+
+
+@router.get("/api/apps")
+async def get_apps():
+    """Retrieve the full user-editable app registry."""
+    return task_recommendation_engine.get_apps()
+
+
+@router.post("/api/apps")
+async def create_app(request: AppCreate):
+    """Add a new app to the registry."""
+    created = task_recommendation_engine.create_app(request.model_dump())
+    if created is None:
+        raise HTTPException(status_code=409, detail=f"App '{request.pkg}' already exists.")
+    return created
+
+
+@router.put("/api/apps/{pkg}")
+async def update_app(pkg: str, request: AppUpdate):
+    """Update an existing app's name/icon/category."""
+    updated = task_recommendation_engine.update_app(pkg, request.model_dump())
+    if updated is None:
+        raise HTTPException(status_code=404, detail=f"App '{pkg}' not found.")
+    return updated
+
+
+@router.delete("/api/apps/{pkg}")
+async def delete_app(pkg: str):
+    """Delete an app from the registry, unless a task preset still references it."""
+    deleted, blocking = task_recommendation_engine.delete_app(pkg)
+    if blocking:
+        raise HTTPException(status_code=409, detail=f"Used by {blocking} task preset(s).")
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"App '{pkg}' not found.")
+    return {"status": "deleted", "pkg": pkg}
 
 
 @router.post("/api/run")

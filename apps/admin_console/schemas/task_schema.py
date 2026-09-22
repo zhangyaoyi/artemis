@@ -55,3 +55,16 @@ class TaskPresetWrite(BaseModel):
     goal: str
     profile: Literal["flash", "pro"]
     app_pkgs: list[str] = Field(default_factory=list)
+
+
+class AppCreate(BaseModel):
+    pkg: str
+    name: str
+    icon: str
+    category: str = "general"
+
+
+class AppUpdate(BaseModel):
+    name: str
+    icon: str
+    category: str = "general"
