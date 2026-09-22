@@ -160,6 +160,7 @@
     display: flex;
     gap: 2px;
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.15s ease;
 
     .tpf-chip-action-btn {
@@ -191,8 +192,10 @@
     }
   }
 
-  &:hover .tpf-chip-actions {
+  &:hover .tpf-chip-actions,
+  &:focus-within .tpf-chip-actions {
     opacity: 1;
+    pointer-events: auto;
   }
 }
 

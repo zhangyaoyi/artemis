@@ -49,10 +49,10 @@
                 <span>{{ app.name }}</span>
               </button>
               <div class="tpf-chip-actions">
-                <button type="button" class="tpf-chip-action-btn" title="Edit app" (click)="openEditAppForm(app, $event)">
+                <button type="button" class="tpf-chip-action-btn" title="Edit app" aria-label="Edit app" (click)="openEditAppForm(app, $event)">
                   <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button type="button" class="tpf-chip-action-btn tpf-chip-action-danger" title="Delete app" (click)="deleteApp(app, $event)">
+                <button type="button" class="tpf-chip-action-btn tpf-chip-action-danger" title="Delete app" aria-label="Delete app" (click)="deleteApp(app, $event)">
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>

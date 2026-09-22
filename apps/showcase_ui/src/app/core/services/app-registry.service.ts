@@ -83,14 +83,14 @@ export class AppRegistryService {
   }
 
   public updateApp(pkg: string, payload: AppUpdatePayload): Observable<AppReference> {
-    return this.http.put<RawApp>(`/api/apps/${pkg}`, payload).pipe(
+    return this.http.put<RawApp>(`/api/apps/${encodeURIComponent(pkg)}`, payload).pipe(
       tap(() => this.loadApps().subscribe()),
       map((raw) => mapApp(raw))
     );
   }
 
   public deleteApp(pkg: string): Observable<{ status: string; pkg: string }> {
-    return this.http.delete<{ status: string; pkg: string }>(`/api/apps/${pkg}`).pipe(
+    return this.http.delete<{ status: string; pkg: string }>(`/api/apps/${encodeURIComponent(pkg)}`).pipe(
       tap(() => this.loadApps().subscribe())
     );
   }

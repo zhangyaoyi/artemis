@@ -169,3 +169,10 @@ interactions and the 409-inline-message case.
 - Making the icon list itself user-editable/server-side.
 - Cascading delete or any automatic cleanup of task presets referencing a
   deleted app (delete is blocked instead).
+- Propagating an app-registry edit (renamed name/icon) into task presets that
+  already reference it. A preset's `apps` field is a snapshot taken at
+  create/update time, not a live reference — if you rename or re-icon an app
+  in the registry, existing presets keep showing the old name/icon until
+  that specific preset is itself edited and saved. This is a known
+  display-only limitation (the underlying `pkg`/`required_packages` stays
+  correct, so task execution is unaffected).
