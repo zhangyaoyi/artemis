@@ -1,5 +1,5 @@
-<div class="tpf-overlay" (click)="onCancel()">
-  <div class="tpf-modal" (click)="$event.stopPropagation()">
+<div class="tpf-overlay">
+  <div class="tpf-modal">
     <div class="tpf-header">
       <h3>{{ editingTask ? 'Edit Task' : 'Add Task' }}</h3>
       <button type="button" class="tpf-close-btn" (click)="onCancel()">

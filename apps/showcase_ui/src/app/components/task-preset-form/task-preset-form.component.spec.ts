@@ -99,6 +99,17 @@ describe('TaskPresetFormComponent', () => {
     expect(called).toBeTrue();
   });
 
+  it('does not close when the background overlay is clicked', () => {
+    let called = false;
+    component.cancel.subscribe(() => (called = true));
+    fixture.detectChanges();
+
+    const overlay = fixture.nativeElement.querySelector('.tpf-overlay') as HTMLElement;
+    overlay.click();
+
+    expect(called).toBeFalse();
+  });
+
   it('opens the add-app form empty and requires a pkg to be valid', () => {
     component.openAddAppForm();
 

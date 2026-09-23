@@ -1,5 +1,5 @@
-<div class="sf-overlay" (click)="onCancel()">
-  <div class="sf-modal" (click)="$event.stopPropagation()">
+<div class="sf-overlay">
+  <div class="sf-modal">
     <div class="sf-header">
       <h3>{{ editingSchedule ? 'Edit Schedule' : 'New Schedule' }}</h3>
       <button type="button" class="sf-close-btn" (click)="onCancel()">

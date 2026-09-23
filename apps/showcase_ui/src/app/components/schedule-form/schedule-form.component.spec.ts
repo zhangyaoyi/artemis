@@ -199,4 +199,15 @@ describe('ScheduleFormComponent', () => {
     component.onCancel();
     expect(called).toBeTrue();
   });
+
+  it('does not close when the background overlay is clicked', () => {
+    let called = false;
+    component.cancel.subscribe(() => (called = true));
+    fixture.detectChanges();
+
+    const overlay = fixture.nativeElement.querySelector('.sf-overlay') as HTMLElement;
+    overlay.click();
+
+    expect(called).toBeFalse();
+  });
 });
