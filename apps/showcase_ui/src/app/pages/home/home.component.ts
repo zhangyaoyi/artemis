@@ -124,9 +124,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   // Interactive guide tab for LLM / OCR credentials: 'gemini' | 'openai' | 'anthropic'
   public modelSetupMode = signal<'gemini' | 'openai' | 'anthropic'>('gemini');
-  public showAdvancedInspector = signal<boolean>(false);
   public showOcrConfig = signal<boolean>(false);
-  public showFullConfigFile = signal<boolean>(false);
 
   // Model & Environment configuration from backend
   public modelConfigEnv = computed(() => this.systemService.modelConfigEnv());
@@ -761,21 +759,6 @@ export class HomeComponent implements OnInit, OnDestroy {
       default:
         return '';
     }
-  }
-
-  public toggleAdvancedInspector(): void {
-    this.showAdvancedInspector.update(v => !v);
-    if (this.showAdvancedInspector()) {
-      // Expanding the advanced panel means the user intends to manage
-      // config/credentials by hand; don't block the launcher on the
-      // automated credentials probe while they do that.
-      this.systemService.setSkipCredentialsCheck(true);
-      this.systemService.fetchModelConfigEnv().subscribe();
-    }
-  }
-
-  public toggleFullConfigFile(): void {
-    this.showFullConfigFile.update(v => !v);
   }
 
   public toggleGeminiKeyVisibility(): void {
