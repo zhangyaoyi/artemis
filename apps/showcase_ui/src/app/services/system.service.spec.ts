@@ -170,4 +170,37 @@ describe('SystemService readiness polling', () => {
     expect(service.isRemoteAdbServer()).toBeFalse();
     expect(service.adbServerStatus()?.endpoint.port).toBe(5037);
   });
+
+  it('saves the default model provider/model/base URL', () => {
+    let result: any;
+    service.saveDefaultModel('openai', 'deepseek-chat', 'https://api.deepseek.com/v1')
+      .subscribe(res => result = res);
+
+    const req = http.expectOne('/api/system/model-config-env');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      provider: 'openai',
+      model: 'deepseek-chat',
+      api_base: 'https://api.deepseek.com/v1'
+    });
+    req.flush({
+      status: 'success',
+      message: 'Default model set to openai/deepseek-chat.',
+      default_model: { provider: 'openai', model: 'deepseek-chat', api_base: 'https://api.deepseek.com/v1' }
+    });
+
+    expect(result.status).toBe('success');
+  });
+
+  it('refreshes model config env after saving the default model', () => {
+    service.saveDefaultModel('anthropic', 'claude-3-7-sonnet', null).subscribe();
+    http.expectOne('/api/system/model-config-env').flush({
+      status: 'success',
+      message: 'ok',
+      default_model: { provider: 'anthropic', model: 'claude-3-7-sonnet' }
+    });
+
+    // saveDefaultModel triggers a GET refresh of the same URL, same as updateApiKey does.
+    http.expectOne('/api/system/model-config-env');
+  });
 });

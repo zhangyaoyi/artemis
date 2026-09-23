@@ -577,6 +577,25 @@ export class SystemService {
       })
     );
   }
+
+  /**
+   * Persist the global default model's provider/model/base URL into artemis.jsonc.
+   */
+  public saveDefaultModel(
+    provider: 'openai' | 'anthropic',
+    model: string,
+    apiBase: string | null
+  ): Observable<{ status: string; message: string; default_model: Record<string, string> }> {
+    return this.http.post<{ status: string; message: string; default_model: Record<string, string> }>(
+      '/api/system/model-config-env',
+      { provider, model, api_base: apiBase }
+    ).pipe(
+      tap({
+        next: () => this.fetchModelConfigEnv().subscribe(),
+        error: (err) => console.error(`Failed to save default model for ${provider}:`, err)
+      })
+    );
+  }
 }
 
 export interface ModelConfigEnvResponse {
@@ -586,6 +605,7 @@ export interface ModelConfigEnvResponse {
   default_model: {
     provider?: string;
     model?: string;
+    api_base?: string;
     thinking_level?: string;
     fallback?: {
       provider?: string;
