@@ -68,3 +68,10 @@ class AppUpdate(BaseModel):
     name: str
     icon: str
     category: str = "general"
+
+
+class ScheduleWrite(BaseModel):
+    preset_id: str
+    schedule_type: Literal["once", "cron"]
+    run_at: str | None = None
+    cron_expression: str | None = None
