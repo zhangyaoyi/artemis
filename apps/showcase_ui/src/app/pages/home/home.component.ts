@@ -791,21 +791,18 @@ export class HomeComponent implements OnInit, OnDestroy {
   public saveGeminiKey(): void {
     const key = this.geminiKeyInput().trim();
     if (!key) return;
+    const model = this.geminiModelInput().trim();
+    if (!model) {
+      this.geminiSaveError.set('Model name is required.');
+      return;
+    }
     this.isSavingGeminiKey.set(true);
     this.geminiSaveError.set(null);
     this.geminiSaveMessage.set(null);
 
-    const model = this.geminiModelInput().trim();
-
     this.systemService.updateApiKey('google', key, true).subscribe({
       next: (res) => {
         this.isGeminiKeyEdited.set(false);
-        if (!model) {
-          this.isSavingGeminiKey.set(false);
-          this.geminiSaveMessage.set(res?.message || '✓ Gemini API key verified & saved successfully.');
-          setTimeout(() => this.geminiSaveMessage.set(null), 5000);
-          return;
-        }
         this.systemService.saveDefaultModel('google', model, null).subscribe({
           next: (modelRes) => {
             this.isSavingGeminiKey.set(false);
@@ -1002,21 +999,18 @@ export class HomeComponent implements OnInit, OnDestroy {
   public saveAnthropicKey(): void {
     const key = this.anthropicKeyInput().trim();
     if (!key) return;
+    const model = this.anthropicModelInput().trim();
+    if (!model) {
+      this.anthropicSaveError.set('Model name is required.');
+      return;
+    }
     this.isSavingAnthropicConfig.set(true);
     this.anthropicSaveError.set(null);
     this.anthropicSaveMessage.set(null);
 
-    const model = this.anthropicModelInput().trim();
-
     this.systemService.updateApiKey('anthropic', key, true).subscribe({
       next: (res) => {
         this.isAnthropicKeyEdited.set(false);
-        if (!model) {
-          this.isSavingAnthropicConfig.set(false);
-          this.anthropicSaveMessage.set(res?.message || '✓ Anthropic API key verified & saved successfully.');
-          setTimeout(() => this.anthropicSaveMessage.set(null), 5000);
-          return;
-        }
         this.systemService.saveDefaultModel('anthropic', model, null).subscribe({
           next: (modelRes) => {
             this.isSavingAnthropicConfig.set(false);

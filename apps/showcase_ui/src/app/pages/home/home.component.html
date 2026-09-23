@@ -468,7 +468,7 @@
       <div class="input-box-header">
         <div class="header-label">
           <span class="material-symbols-outlined label-icon">model_training</span>
-          <span>Model (optional — leave blank to keep the current default):</span>
+          <span>Model:</span>
         </div>
       </div>
       <div class="unified-key-row">
@@ -517,7 +517,7 @@
         </div>
 
         <button type="button" class="btn-unified-save" [class.btn-dirty]="isAnthropicKeyModified()"
-          [disabled]="isSavingAnthropicConfig() || isTestingAnthropicConfig() || (!isAnthropicKeyModified() && !anthropicKeyInput().trim())"
+          [disabled]="isSavingAnthropicConfig() || isTestingAnthropicConfig() || !anthropicKeyInput().trim() || !anthropicModelInput().trim()"
           (click)="saveAnthropicKey()">
           @if (isSavingAnthropicConfig()) {
           <span class="material-symbols-outlined spin">sync</span>
@@ -560,7 +560,7 @@
       <div class="input-box-header">
         <div class="header-label">
           <span class="material-symbols-outlined label-icon">model_training</span>
-          <span>Model (optional — leave blank to keep the current default):</span>
+          <span>Model:</span>
         </div>
       </div>
       <div class="unified-key-row">
@@ -615,7 +615,7 @@
 
         <!-- Save Button -->
         <button type="button" class="btn-unified-save" [class.btn-dirty]="isGeminiModified()"
-          [disabled]="isSavingGeminiKey() || isTestingGeminiKey() || (!isGeminiModified() && !geminiKeyInput().trim())" (click)="saveGeminiKey()">
+          [disabled]="isSavingGeminiKey() || isTestingGeminiKey() || !geminiKeyInput().trim() || !geminiModelInput().trim()" (click)="saveGeminiKey()">
           @if (isSavingGeminiKey()) {
           <span class="material-symbols-outlined spin">sync</span>
           <span>{{ geminiKeyInput().trim() ? 'Verifying & Saving...' : 'Clearing...' }}</span>
