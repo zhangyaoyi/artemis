@@ -1,0 +1,51 @@
+<div class="sf-overlay" (click)="onCancel()">
+  <div class="sf-modal" (click)="$event.stopPropagation()">
+    <div class="sf-header">
+      <h3>{{ editingSchedule ? 'Edit Schedule' : 'New Schedule' }}</h3>
+      <button type="button" class="sf-close-btn" (click)="onCancel()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="sf-body">
+      <label class="sf-field">
+        <span class="sf-label">Task Preset</span>
+        <select [ngModel]="presetId()" (ngModelChange)="presetId.set($event)">
+          @for (task of taskRecService.allTasks(); track task.id) {
+            <option [value]="task.id">{{ task.title }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="sf-field">
+        <span class="sf-label">Schedule Type</span>
+        <div class="sf-type-toggle">
+          <button type="button" [class.active]="scheduleType() === 'once'" (click)="scheduleType.set('once')">Once</button>
+          <button type="button" [class.active]="scheduleType() === 'cron'" (click)="scheduleType.set('cron')">Cron</button>
+        </div>
+      </div>
+
+      @if (scheduleType() === 'once') {
+        <label class="sf-field">
+          <span class="sf-label">Run At</span>
+          <input type="datetime-local" [ngModel]="runAt()" (ngModelChange)="runAt.set($event)" />
+        </label>
+      } @else {
+        <label class="sf-field">
+          <span class="sf-label">Cron Expression</span>
+          <input type="text" [ngModel]="cronExpression()" (ngModelChange)="cronExpression.set($event)" placeholder="e.g. 0 9 * * 1,3,5" />
+        </label>
+      }
+    </div>
+
+    <div class="sf-footer">
+      @if (errorText) {
+        <span class="sf-error">{{ errorText }}</span>
+      }
+      <div class="sf-footer-actions">
+        <button type="button" class="sf-btn-secondary" (click)="onCancel()">Cancel</button>
+        <button type="button" class="sf-btn-primary" [disabled]="!isValid" (click)="onSave()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
