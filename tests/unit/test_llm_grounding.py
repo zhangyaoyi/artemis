@@ -30,6 +30,30 @@ def test_model_factory_anthropic_instantiation():
     assert getattr(model, "thinking", None) == {"type": "enabled", "budget_tokens": 32768}
 
 
+def test_model_factory_anthropic_honors_custom_base_url():
+    """A per-endpoint api_base must reach ChatAnthropic as anthropic_api_url."""
+    ep = ModelEndpoint(
+        provider=ModelProvider.ANTHROPIC,
+        model_name="claude-3-7-sonnet-20250219",
+        api_key="sk-ant-test-key",
+        api_base="https://anthropic-gateway.internal/v1",
+    )
+    model = ModelFactory.create_model(ep)
+    assert model.anthropic_api_url == "https://anthropic-gateway.internal/v1"
+
+
+def test_model_factory_anthropic_default_base_url_when_unset():
+    """Without an explicit api_base, ChatAnthropic must fall back to its own default
+    (no api_base=None regression that would break the official Anthropic endpoint)."""
+    ep = ModelEndpoint(
+        provider=ModelProvider.ANTHROPIC,
+        model_name="claude-3-7-sonnet-20250219",
+        api_key="sk-ant-test-key",
+    )
+    model = ModelFactory.create_model(ep)
+    assert model.anthropic_api_url == "https://api.anthropic.com"
+
+
 def test_model_factory_openai_instantiation():
     """Verify OpenAI model instantiation with reasoning effort."""
     oai_ep = ModelEndpoint(

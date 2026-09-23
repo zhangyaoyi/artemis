@@ -80,6 +80,7 @@ class LLM(BaseModel):
     reasoning_effort: Literal["none", "low", "medium", "high"] | None = None
     include_thoughts: bool | None = None
     enable_grounding: bool | None = None
+    api_base: str | None = None
 
     def validate_provider(self, name: str) -> None:
         """Ensure the required API key or credentials exist in settings for this provider."""
@@ -271,26 +272,32 @@ def _expand_default_into_nodes(config_dict: dict) -> dict:
         "object_detector",
     ]
 
+    def _apply_override(base_cfg: dict, override: dict) -> dict:
+        cfg = dict(base_cfg)
+        for k, v in override.items():
+            if isinstance(v, dict) and isinstance(cfg.get(k), dict):
+                cfg[k] = {**cfg[k], **v}
+            else:
+                cfg[k] = v
+        # A node that switches provider without specifying its own api_base
+        # must not silently inherit the default's api_base -- that would
+        # point the new provider at the wrong host.
+        if "provider" in override and "api_base" not in override:
+            cfg.pop("api_base", None)
+        return cfg
+
     result: dict[str, Any] = {}
     for node in all_agent_nodes:
         node_cfg = dict(default_model_cfg)
         if node in nodes_override:
-            for k, v in nodes_override[node].items():
-                if isinstance(v, dict) and isinstance(node_cfg.get(k), dict):
-                    node_cfg[k] = {**node_cfg[k], **v}
-                else:
-                    node_cfg[k] = v
+            node_cfg = _apply_override(node_cfg, nodes_override[node])
         result[node] = node_cfg
 
     utils_dict: dict[str, Any] = {}
     for util in all_utils_nodes:
         util_cfg = dict(default_model_cfg)
         if util in nodes_override:
-            for k, v in nodes_override[util].items():
-                if isinstance(v, dict) and isinstance(util_cfg.get(k), dict):
-                    util_cfg[k] = {**util_cfg[k], **v}
-                else:
-                    util_cfg[k] = v
+            util_cfg = _apply_override(util_cfg, nodes_override[util])
         utils_dict[util] = util_cfg
     result["utils"] = utils_dict
 

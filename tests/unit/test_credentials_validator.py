@@ -69,6 +69,24 @@ async def test_validate_gemini_failure():
 
 
 @pytest.mark.asyncio
+async def test_validate_anthropic_honors_custom_base_url():
+    """A gateway/custom Anthropic-compatible endpoint must be tested against its
+    own base_url, not the hardcoded official api.anthropic.com host."""
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_get.return_value = mock_resp
+
+        is_valid, _msg = await validate_api_key(
+            "anthropic", "sk-ant-test-key", base_url="https://anthropic-gateway.internal/v1"
+        )
+        assert is_valid
+
+        called_url = mock_get.call_args.args[0]
+        assert called_url == "https://anthropic-gateway.internal/v1/models"
+
+
+@pytest.mark.asyncio
 async def test_validate_ocr_success():
     with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
         mock_resp = MagicMock()
