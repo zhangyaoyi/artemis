@@ -22,6 +22,7 @@ def test_get_all_tasks_seeds_the_builtin_presets(tmp_path):
 
     assert len(tasks) == len(PRESET_TASK_CATALOG)
     assert all(t["is_builtin"] is True for t in tasks)
+    assert all(t["category"] == t["apps"][0]["category"] for t in tasks)
 
 
 def test_get_app_registry_returns_package_lookup(tmp_path):
@@ -46,10 +47,13 @@ def test_recommend_tasks_prioritizes_device_matched_apps(tmp_path):
 def test_recommend_tasks_filters_by_category(tmp_path):
     engine = _engine(tmp_path)
 
-    pro_tasks = engine.recommend_tasks(installed_packages=[], category="pro", limit=20)
+    browser_tasks = engine.recommend_tasks(
+        installed_packages=[], category="browser", limit=20
+    )
 
-    assert pro_tasks
-    assert all(t["profile"] == "pro" for t in pro_tasks)
+    assert browser_tasks
+    assert all(t["category"] == "browser" for t in browser_tasks)
+    assert {t["profile"] for t in browser_tasks} == {"flash", "pro"}
 
 
 def test_create_task_derives_tag_and_category_for_multi_app(tmp_path):
@@ -65,7 +69,7 @@ def test_create_task_derives_tag_and_category_for_multi_app(tmp_path):
         }
     )
 
-    assert created["category"] == "cross_app"
+    assert created["category"] == "browser"
     assert created["tag"] == "Chrome + Keep Notes"
     assert created["required_packages"] == ["com.android.chrome", "com.google.android.keep"]
     assert created["is_builtin"] is False
@@ -115,12 +119,11 @@ def test_delete_task_removes_a_seeded_builtin(tmp_path):
 
 def _seed_curated_preset(engine):
     """Seed a preset directly via the repository with hand-curated
-    category/priority/match_mode values that differ from what
-    `_derive_fields` (create_task's logic) would compute. This mirrors a
-    real built-in preset like `pro_settings_qa` (category="monitor"), but
-    also pins match_mode="all" so we can confirm it survives an update
-    untouched -- create_task's derivation always forces match_mode="any",
-    so this value could only have come from curation.
+    priority/match_mode values that differ from what `_derive_fields`
+    (create_task's logic) would compute. It pins match_mode="all" so we
+    can confirm it survives an update untouched -- create_task's derivation
+    always forces match_mode="any", so this value could only have come from
+    curation.
     """
     engine._ensure_seeded()
     now = "2026-01-01T00:00:00+00:00"
@@ -130,7 +133,7 @@ def _seed_curated_preset(engine):
         "description": "Original description",
         "goal": "Original goal",
         "profile": "pro",
-        "category": "monitor",
+        "category": "browser",
         "tag": "Chrome",
         "apps": [
             {"name": "Chrome", "pkg": "com.android.chrome", "category": "browser"}
@@ -146,7 +149,7 @@ def _seed_curated_preset(engine):
     return row
 
 
-def test_update_task_preserves_category_priority_and_match_mode_on_noop_edit(tmp_path):
+def test_update_task_preserves_priority_and_match_mode_on_noop_edit(tmp_path):
     """Finding 1 regression test: a title-only edit must not clobber the
     existing preset's curated category/priority/match_mode."""
     engine = _engine(tmp_path)
@@ -166,24 +169,16 @@ def test_update_task_preserves_category_priority_and_match_mode_on_noop_edit(tmp
     assert updated is not None
     assert updated["title"] == "Renamed Title"
     # These must be UNCHANGED from the seeded values, not recomputed via
-    # _derive_fields (which would give category="pro", match_mode="any",
-    # priority=60).
-    assert updated["category"] == "monitor"
+    # _derive_fields (which would reset match_mode/priority).
+    assert updated["category"] == "browser"
     assert updated["match_mode"] == "all"
     assert updated["priority"] == 93
 
 
 def test_update_task_recomputes_tag_and_required_packages_when_apps_change(tmp_path):
     """When the app selection legitimately changes, tag/apps/required_packages
-    must update to reflect the new selection. Per the judgment call documented
-    in TaskRecommendationEngine.update_task, category/match_mode/priority are
-    still preserved from the existing row even when the app selection changes
-    from single-app to multi-app -- update_task never recomputes those fields,
-    only create_task does. This is a deliberate choice: category/match_mode/
-    priority are curated properties of a preset, not a mechanical function of
-    the app count, so an edit shouldn't silently flip them (e.g. a
-    single-app "monitor" preset gaining a second app should not silently
-    become an uncurated "cross_app" preset with default priority)."""
+    and category must update to reflect the new selection. Match mode and
+    priority remain curated properties and should not silently reset."""
     engine = _engine(tmp_path)
     _seed_curated_preset(engine)
 
@@ -202,17 +197,63 @@ def test_update_task_recomputes_tag_and_required_packages_when_apps_change(tmp_p
     assert updated["tag"] == "Chrome + Keep Notes"
     assert updated["required_packages"] == ["com.android.chrome", "com.google.android.keep"]
     assert len(updated["apps"]) == 2
-    # Category/match_mode/priority remain preserved -- see docstring above.
-    assert updated["category"] == "monitor"
+    # The first app remains Chrome, so the domain remains browser.
+    assert updated["category"] == "browser"
     assert updated["match_mode"] == "all"
     assert updated["priority"] == 93
 
 
-def test_create_task_still_derives_category_match_mode_and_priority_fresh(tmp_path):
-    """Sanity check that create_task's behavior is unchanged by the
-    _derive_fields/_derive_app_fields split: brand-new presets still get
-    category derived from app count/profile, match_mode="any", and
-    priority=60."""
+def test_update_task_uses_new_first_app_category(tmp_path):
+    engine = _engine(tmp_path)
+    _seed_curated_preset(engine)
+
+    updated = engine.update_task(
+        "curated_preset",
+        {
+            "title": "Original Title",
+            "description": "Original description",
+            "goal": "Original goal",
+            "profile": "pro",
+            "app_pkgs": ["com.google.android.apps.maps", "com.android.chrome"],
+        },
+    )
+
+    assert updated is not None
+    assert updated["category"] == "navigation"
+    assert updated["match_mode"] == "all"
+    assert updated["priority"] == 93
+
+
+def test_existing_task_category_is_migrated_from_app_registry(tmp_path):
+    engine = _engine(tmp_path)
+    now = "2026-01-01T00:00:00+00:00"
+    engine.repository.create(
+        {
+            "id": "legacy-task",
+            "title": "Legacy",
+            "description": "Legacy category",
+            "goal": "g",
+            "profile": "flash",
+            "category": "flash",
+            "tag": "WeChat",
+            "apps": [
+                {"name": "WeChat", "pkg": "com.tencent.mm", "category": "social"}
+            ],
+            "required_packages": ["com.tencent.mm"],
+            "match_mode": "any",
+            "priority": 60,
+            "is_builtin": False,
+            "created_at": now,
+            "updated_at": now,
+        }
+    )
+
+    tasks = engine.get_all_tasks()
+
+    assert tasks[0]["category"] == "social"
+
+
+def test_create_task_derives_first_app_category_match_mode_and_priority(tmp_path):
     engine = _engine(tmp_path)
 
     created = engine.create_task(
@@ -225,7 +266,7 @@ def test_create_task_still_derives_category_match_mode_and_priority_fresh(tmp_pa
         }
     )
 
-    assert created["category"] == "flash"
+    assert created["category"] == "browser"
     assert created["match_mode"] == "any"
     assert created["priority"] == 60
 
@@ -269,6 +310,7 @@ def test_create_app_adds_a_new_selectable_app(tmp_path):
         }
     )
     assert task["required_packages"] == ["com.example.newapp"]
+    assert task["category"] == "tools"
 
 
 def test_create_app_returns_none_for_duplicate_pkg(tmp_path):
@@ -298,6 +340,23 @@ def test_update_app_changes_name_category(tmp_path):
     )
 
     assert updated["name"] == "Renamed"
+
+
+def test_update_app_category_cascades_to_first_app_tasks(tmp_path):
+    engine = _engine(tmp_path)
+    task = engine.create_task(
+        {
+            "title": "Use Chrome",
+            "description": "d",
+            "goal": "g",
+            "profile": "flash",
+            "app_pkgs": ["com.android.chrome"],
+        }
+    )
+
+    engine.update_app("com.android.chrome", {"name": "Chrome", "category": "web"})
+
+    assert engine.repository.get(task["id"])["category"] == "web"
 
 
 def test_delete_app_succeeds_when_unreferenced(tmp_path):

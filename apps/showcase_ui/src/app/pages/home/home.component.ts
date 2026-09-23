@@ -493,6 +493,10 @@ export class HomeComponent implements OnInit, OnDestroy {
   public selectedCategory = signal<SuggestionCategory>('all');
   public shuffleOffset = signal<number>(0);
 
+  public categoryTabs = computed<string[]>(() =>
+    Array.from(new Set(this.taskRecService.allTasks().map(task => task.category)))
+  );
+
   // Set of installed package strings from active device
   public installedPackages = computed<Set<string>>(() => {
     const pkgs = this.activeDevice()?.installed_packages;
@@ -1120,6 +1124,14 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   public setCategory(cat: SuggestionCategory): void {
     this.selectedCategory.set(cat);
+  }
+
+  public getCategoryLabel(category: string): string {
+    return category
+      .split(/[_-]+/)
+      .filter(Boolean)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 
   public shuffleSuggestions(): void {

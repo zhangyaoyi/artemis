@@ -37,7 +37,7 @@ interface RawTaskPreset {
   description: string;
   goal: string;
   profile: 'flash' | 'pro';
-  category: 'flash' | 'pro' | 'cross_app' | 'monitor';
+  category: string;
   tag: string;
   apps: AppReference[];
   required_packages: string[];
@@ -159,21 +159,9 @@ export class TaskRecommendationService {
     });
 
     // 2. Filter by category
-    let filtered = scored.filter(item => {
-      if (category === 'flash') {
-        return item.task.profile === 'flash';
-      }
-      if (category === 'pro') {
-        return item.task.profile === 'pro';
-      }
-      if (category === 'cross_app') {
-        return item.task.category === 'cross_app';
-      }
-      if (category === 'monitor') {
-        return item.task.category === 'monitor';
-      }
-      return true; // 'all'
-    });
+    let filtered = scored.filter(item =>
+      category === 'all' || item.task.category === category
+    );
 
     // 3. Sort by score descending (matched apps first)
     filtered.sort((a, b) => b.score - a.score);

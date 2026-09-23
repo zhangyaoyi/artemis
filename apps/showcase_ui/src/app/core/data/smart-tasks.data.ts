@@ -21,12 +21,7 @@ export interface AppReference {
   isBuiltin?: boolean;
 }
 
-export type SuggestionCategory =
-  | 'all'
-  | 'flash'
-  | 'pro'
-  | 'cross_app'
-  | 'monitor';
+export type SuggestionCategory = string;
 
 export interface SmartSuggestion {
   id: string;
@@ -34,7 +29,7 @@ export interface SmartSuggestion {
   description: string;
   goal: string;
   profile: 'flash' | 'pro';
-  category: 'flash' | 'pro' | 'cross_app' | 'monitor';
+  category: string;
   tag: string;
   apps: AppReference[];
   requiredPackages?: string[];

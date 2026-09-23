@@ -1996,45 +1996,16 @@
                   <span>All</span>
                 </button>
 
-                <button
-                  type="button"
-                  class="cat-tab-btn cat-flash"
-                  [class.active]="selectedCategory() === 'flash'"
-                  (click)="setCategory('flash')"
-                >
-                  <span class="material-symbols-outlined tab-mini-icon">bolt</span>
-                  <span>Flash</span>
-                </button>
-
-                <button
-                  type="button"
-                  class="cat-tab-btn cat-pro"
-                  [class.active]="selectedCategory() === 'pro'"
-                  (click)="setCategory('pro')"
-                >
-                  <span class="material-symbols-outlined tab-mini-icon">psychology</span>
-                  <span>Pro</span>
-                </button>
-
-                <button
-                  type="button"
-                  class="cat-tab-btn"
-                  [class.active]="selectedCategory() === 'cross_app'"
-                  (click)="setCategory('cross_app')"
-                >
-                  <span class="material-symbols-outlined tab-mini-icon">sync_alt</span>
-                  <span>Multi-App</span>
-                </button>
-
-                <button
-                  type="button"
-                  class="cat-tab-btn"
-                  [class.active]="selectedCategory() === 'monitor'"
-                  (click)="setCategory('monitor')"
-                >
-                  <span class="material-symbols-outlined tab-mini-icon">monitoring</span>
-                  <span>Monitor</span>
-                </button>
+                @for (category of categoryTabs(); track category) {
+                  <button
+                    type="button"
+                    class="cat-tab-btn"
+                    [class.active]="selectedCategory() === category"
+                    (click)="setCategory(category)"
+                  >
+                    <span>{{ getCategoryLabel(category) }}</span>
+                  </button>
+                }
               </div>
             </div>
 

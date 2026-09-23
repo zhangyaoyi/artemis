@@ -59,7 +59,7 @@ class TaskPreset(BaseModel):
     description: str
     goal: str
     profile: Literal["flash", "pro"]
-    category: Literal["flash", "pro", "cross_app", "monitor"]
+    category: str
     tag: str
     apps: list[AppInfo]
     required_packages: list[str] = Field(default_factory=list)
@@ -135,7 +135,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Search nearby top-rated cafes in Google Maps",
         goal="Open Google Maps, search for top-rated specialty coffee shops nearby, and view the top result details.",
         profile="flash",
-        category="flash",
+        category="navigation",
         tag="Maps",
         apps=[
             AppInfo(
@@ -153,7 +153,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Check transit time on Maps and draft arrival ETA in Messages",
         goal="Open Google Maps to check commute time to the International Airport, calculate arrival time, then open Messages and draft an ETA text message.",
         profile="pro",
-        category="cross_app",
+        category="navigation",
         tag="Maps + Messages",
         apps=[
             AppInfo(
@@ -178,7 +178,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Find recent flight or delivery confirmation emails in Gmail",
         goal="Open Gmail and search for recent flight or package delivery confirmation emails.",
         profile="flash",
-        category="flash",
+        category="productivity",
         tag="Gmail",
         apps=[AppInfo(name="Gmail", pkg="com.google.android.gm", category="productivity")],
         required_packages=["com.google.android.gm"],
@@ -190,7 +190,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Extract flight or event dates from Gmail and schedule in Calendar",
         goal="Open Gmail to find the latest event invitation or itinerary, extract dates and location, then open Google Calendar and create a corresponding calendar event.",
         profile="pro",
-        category="cross_app",
+        category="productivity",
         tag="Gmail + Calendar",
         apps=[
             AppInfo(name="Gmail", pkg="com.google.android.gm", category="productivity"),
@@ -210,7 +210,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Search latest multimodal AI developments in Chrome browser",
         goal="Open Chrome browser and search for latest breakthroughs in multimodal mobile AI agents.",
         profile="flash",
-        category="flash",
+        category="browser",
         tag="Chrome",
         apps=[AppInfo(name="Chrome", pkg="com.android.chrome", category="browser")],
         required_packages=["com.android.chrome"],
@@ -222,7 +222,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Compare top 3 headphones on Chrome and record comparison in Keep",
         goal="Open Chrome, research top 3 noise-cancelling headphones comparing price and battery life, then write a structured comparison summary note in Keep Notes.",
         profile="pro",
-        category="pro",
+        category="browser",
         tag="Chrome + Keep",
         apps=[
             AppInfo(name="Chrome", pkg="com.android.chrome", category="browser"),
@@ -242,7 +242,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Search and play a Lo-Fi hip hop live stream on YouTube",
         goal='Open YouTube, search for "Lofi hip hop beats relaxing radio" and tap on the live stream.',
         profile="flash",
-        category="flash",
+        category="entertainment",
         tag="YouTube",
         apps=[
             AppInfo(
@@ -261,7 +261,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Toggle dark theme and verify network connection in Settings",
         goal="Open Settings app, navigate to Display settings, ensure Dark theme is enabled, and check Wi-Fi connection status.",
         profile="flash",
-        category="flash",
+        category="system",
         tag="Settings",
         apps=[AppInfo(name="Settings", pkg="com.android.settings", category="system")],
         required_packages=["com.android.settings"],
@@ -273,7 +273,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Traverse Settings submenus to verify screens and check for crash dialogs",
         goal="Explore Settings submenus (Network, Connected devices, Apps, Battery, Storage), verify each screen loads properly without ANR or crash dialogs, and summarize results.",
         profile="pro",
-        category="monitor",
+        category="system",
         tag="Settings QA",
         apps=[AppInfo(name="Settings", pkg="com.android.settings", category="system")],
         required_packages=["com.android.settings"],
@@ -286,7 +286,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Start a 25-minute focus countdown timer in Clock app",
         goal="Open Clock app, switch to Timer tab, set 25 minutes and start the countdown timer.",
         profile="flash",
-        category="flash",
+        category="utility",
         tag="Clock",
         apps=[AppInfo(name="Clock", pkg="com.google.android.deskclock", category="utility")],
         required_packages=["com.google.android.deskclock", "com.android.deskclock"],
@@ -299,7 +299,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Calculate 18% gratuity on $186.40 for 3 people in Calculator",
         goal="Open Calculator and calculate 18% tip on a bill of $186.40, then divide by 3 people.",
         profile="flash",
-        category="flash",
+        category="utility",
         tag="Calculator",
         apps=[
             AppInfo(
@@ -318,7 +318,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Open Google Photos and review the latest screenshot taken",
         goal="Open Google Photos and view the most recent screenshot in the screenshots album.",
         profile="flash",
-        category="flash",
+        category="media",
         tag="Photos",
         apps=[
             AppInfo(
@@ -337,7 +337,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Open WeChat and view top recent chat conversations",
         goal="Open WeChat and view the top recent chat messages.",
         profile="flash",
-        category="flash",
+        category="social",
         tag="WeChat",
         apps=[AppInfo(name="WeChat", pkg="com.tencent.mm", category="social")],
         required_packages=["com.tencent.mm"],
@@ -349,7 +349,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Extract meeting notice from WeChat chat and add to Calendar",
         goal="Open WeChat, locate the latest meeting announcement or event message in the top chat, extract the time and topic, then open Calendar and schedule an event.",
         profile="pro",
-        category="cross_app",
+        category="social",
         tag="WeChat + Calendar",
         apps=[
             AppInfo(name="WeChat", pkg="com.tencent.mm", category="social"),
@@ -369,7 +369,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Search trending specialty cafe reviews on Xiaohongshu",
         goal="Open Xiaohongshu, search for top-rated specialty coffee shops, and view the top post.",
         profile="flash",
-        category="flash",
+        category="social",
         tag="Xiaohongshu",
         apps=[AppInfo(name="Xiaohongshu", pkg="com.xingin.xhs", category="social")],
         required_packages=["com.xingin.xhs"],
@@ -382,7 +382,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Search top-rated Ramen nearby on Meituan or Dianping",
         goal="Open Meituan or Dianping, search for top-rated Ramen nearby, and view top restaurant rating.",
         profile="flash",
-        category="flash",
+        category="lifestyle",
         tag="Meituan",
         apps=[AppInfo(name="Meituan", pkg="com.sankuai.meituan", category="lifestyle")],
         required_packages=["com.sankuai.meituan", "com.dianping.v1"],
@@ -395,7 +395,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Search and play an AI Agent tutorial video on Bilibili",
         goal='Open Bilibili, search for "AI Agent Architecture", and play the top matching video.',
         profile="flash",
-        category="flash",
+        category="entertainment",
         tag="Bilibili",
         apps=[
             AppInfo(
@@ -414,7 +414,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         description="Compare top task management apps and ratings on Google Play",
         goal="Open Google Play Store, search for top rated task management apps, compare ratings and latest user reviews of the top 2 candidates, and record recommendations.",
         profile="pro",
-        category="pro",
+        category="tools",
         tag="Play Store",
         apps=[AppInfo(name="Play Store", pkg="com.android.vending", category="tools")],
         required_packages=["com.android.vending"],
@@ -475,12 +475,23 @@ class TaskRecommendationEngine:
             return
         self.repository.seed_if_empty(_builtin_seed_rows())
         self._seeded = True
+        self._sync_task_categories()
 
     def _ensure_apps_seeded(self) -> None:
         if self._apps_seeded:
             return
         self.app_repository.seed_if_empty(_builtin_app_seed_rows())
         self._apps_seeded = True
+
+    def _sync_task_categories(self) -> None:
+        """Migrate persisted presets to the first app's registry category."""
+        self._ensure_apps_seeded()
+        for task in self.repository.list_all():
+            apps = task.get("apps") or []
+            first_pkg = apps[0].get("pkg") if apps else None
+            first_app = self.app_repository.get(first_pkg) if first_pkg else None
+            if first_app and task["category"] != first_app["category"]:
+                self.repository.update(task["id"], {"category": first_app["category"]})
 
     def get_all_tasks(self) -> list[dict[str, Any]]:
         self._ensure_seeded()
@@ -530,13 +541,7 @@ class TaskRecommendationEngine:
                 else:
                     score -= 40
 
-            if category == "flash" and row["profile"] != "flash":
-                continue
-            elif category == "pro" and row["profile"] != "pro":
-                continue
-            elif category == "cross_app" and row["category"] != "cross_app":
-                continue
-            elif category == "monitor" and row["category"] != "monitor":
+            if category not in ("all", "recommended") and row["category"] != category:
                 continue
 
             scored_tasks.append((score, row, is_matched))
@@ -591,13 +596,13 @@ class TaskRecommendationEngine:
         In addition to the always-recomputed app fields, this derives
         `category`, `match_mode`, and `priority` from scratch, which is the
         correct behavior for a preset that doesn't exist yet. Editing an
-        existing preset must NOT go through this recomputation -- see
-        update_task, which only recomputes the app fields and leaves the
-        existing row's category/match_mode/priority untouched.
+        existing preset derives its category from the first app too, while
+        preserving the existing match_mode and priority.
         """
         fields = self._derive_app_fields(payload)
-        app_pkgs = payload["app_pkgs"]
-        category = "cross_app" if len(app_pkgs) > 1 else fields["profile"]
+        # A task belongs to the domain of its first selected app. Multi-app
+        # tasks intentionally do not receive a separate category.
+        category = fields["apps"][0]["category"]
         fields.update(
             {
                 "category": category,
@@ -622,17 +627,10 @@ class TaskRecommendationEngine:
 
     def update_task(self, preset_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
         self._ensure_seeded()
-        # Only recompute the fields that legitimately change when the app
-        # selection/title/description/goal/profile are edited. Deliberately
-        # do NOT recompute category/match_mode/priority here (unlike
-        # create_task): those are curated per-preset (e.g. "all packages
-        # required" semantics, a hand-tuned priority, a specific catalog
-        # tab). Omitting them from `fields` means
-        # TaskPresetRepository.update() leaves those columns untouched in
-        # the database, so an edit -- even one that changes the app
-        # selection -- preserves the existing row's category, match_mode,
-        # and priority instead of silently resetting them.
+        # Category always follows the first selected app. Match mode and
+        # priority remain curated per-preset and are not reset on edits.
         fields = self._derive_app_fields(payload)
+        fields["category"] = fields["apps"][0]["category"]
         fields["updated_at"] = datetime.now(UTC).isoformat()
         return self.repository.update(preset_id, fields)
 
@@ -660,7 +658,10 @@ class TaskRecommendationEngine:
             "category": payload.get("category") or "general",
             "updated_at": datetime.now(UTC).isoformat(),
         }
-        return self.app_repository.update(pkg, fields)
+        updated = self.app_repository.update(pkg, fields)
+        if updated is not None:
+            self._sync_task_categories()
+        return updated
 
     def delete_app(self, pkg: str) -> tuple[bool, int]:
         """Delete an app unless a task preset still references it.

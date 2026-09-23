@@ -14,7 +14,7 @@ describe('TaskRecommendationService', () => {
     description: 'desc',
     goal: 'goal',
     profile: 'flash',
-    category: 'flash',
+    category: 'navigation',
     tag: 'Maps',
     apps: [
       { name: 'Maps', icon: 'explore', pkg: 'com.google.android.apps.maps', category: 'navigation' }
@@ -103,5 +103,18 @@ describe('TaskRecommendationService', () => {
     refreshReq.flush({ tasks: [] });
 
     expect(service.allTasks()).toEqual([]);
+  });
+
+  it('filters by arbitrary app-domain category without treating profile as a category', () => {
+    service.loadTasks().subscribe();
+    http.expectOne('/api/tasks/catalog').flush({ tasks: [
+      rawTask({ id: 'nav-flash', category: 'navigation', profile: 'flash' }),
+      rawTask({ id: 'nav-pro', category: 'navigation', profile: 'pro' }),
+      rawTask({ id: 'browser-flash', category: 'browser', profile: 'flash' })
+    ] });
+
+    const navigation = service.filterAndRankTasks(new Set(), 'navigation');
+
+    expect(navigation.map(task => task.id)).toEqual(['nav-flash', 'nav-pro']);
   });
 });
