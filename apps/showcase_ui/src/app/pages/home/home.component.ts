@@ -149,9 +149,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   public openaiSaveError = signal<string | null>(null);
   public isOpenaiKeyEdited = signal<boolean>(false);
 
-  // Anthropic-compatible Setup State
-  public anthropicBaseUrlInput = signal<string>('');
-  public anthropicModelInput = signal<string>('');
+  // Anthropic Setup State
   public anthropicKeyInput = signal<string>('');
   public showAnthropicKey = signal<boolean>(false);
   public isSavingAnthropicConfig = signal<boolean>(false);
@@ -650,12 +648,11 @@ export class HomeComponent implements OnInit, OnDestroy {
       const apiBase = cfg.default_model?.api_base || '';
       // openrouter/xai/ollama/vllm/custom all share the OpenAI-compatible
       // ChatOpenAI dispatch branch in artemis/llm/router.py, so they all
-      // land on the "OpenAI 兼容" card too.
+      // land on the "OpenAI" card too. Anthropic has no Base URL/Model
+      // fields (it only manages ANTHROPIC_API_KEY, like the Gemini card),
+      // so there's nothing to pre-fill for it here.
       const openaiLikeProviders = ['openai', 'openrouter', 'xai', 'ollama', 'vllm', 'custom'];
-      if (provider === 'anthropic') {
-        this.anthropicModelInput.set(model);
-        this.anthropicBaseUrlInput.set(apiBase);
-      } else if (openaiLikeProviders.includes(provider)) {
+      if (openaiLikeProviders.includes(provider)) {
         this.openaiModelInput.set(model);
         // A legacy provider (openrouter/xai/ollama/vllm/custom) with no
         // explicit api_base was actually resolving against that provider's
@@ -975,74 +972,79 @@ export class HomeComponent implements OnInit, OnDestroy {
     });
   }
 
-  public onAnthropicConfigChange(): void {
+  public onAnthropicKeyChange(val: string): void {
+    this.anthropicKeyInput.set(val);
     this.isAnthropicKeyEdited.set(true);
     this.anthropicSaveError.set(null);
     this.anthropicSaveMessage.set(null);
   }
 
-  public saveAnthropicConfig(): void {
-    const model = this.anthropicModelInput().trim();
-    if (!model) {
-      this.anthropicSaveError.set('Model name is required.');
-      return;
-    }
+  public saveAnthropicKey(): void {
+    const key = this.anthropicKeyInput().trim();
+    if (!key) return;
     this.isSavingAnthropicConfig.set(true);
     this.anthropicSaveError.set(null);
     this.anthropicSaveMessage.set(null);
 
-    const key = this.anthropicKeyInput().trim();
-    const baseUrl = this.anthropicBaseUrlInput().trim() || null;
+    this.systemService.updateApiKey('anthropic', key, true).subscribe({
+      next: (res) => {
+        this.isSavingAnthropicConfig.set(false);
+        this.isAnthropicKeyEdited.set(false);
+        this.anthropicSaveMessage.set(res?.message || '✓ Anthropic API key verified & saved successfully.');
+        setTimeout(() => this.anthropicSaveMessage.set(null), 5000);
+      },
+      error: (err) => {
+        this.isSavingAnthropicConfig.set(false);
+        this.anthropicSaveError.set(err?.error?.detail || err?.message || 'Failed to update Anthropic API key.');
+      }
+    });
+  }
 
-    const saveKey$ = key
-      ? this.systemService.updateApiKey('anthropic', key, true, baseUrl || undefined)
-      : null;
+  public clearAnthropicKey(): void {
+    this.anthropicKeyInput.set('');
+    this.isAnthropicKeyEdited.set(false);
+    this.anthropicSaveError.set(null);
+    this.anthropicSaveMessage.set(null);
 
-    const afterKey = () => {
-      this.systemService.saveDefaultModel('anthropic', model, baseUrl).subscribe({
+    if (this.savedAnthropicKey().trim()) {
+      this.isSavingAnthropicConfig.set(true);
+      this.systemService.updateApiKey('anthropic', '', true).subscribe({
         next: (res) => {
           this.isSavingAnthropicConfig.set(false);
-          this.isAnthropicKeyEdited.set(false);
-          this.anthropicSaveMessage.set(res?.message || '✓ Anthropic-compatible config saved.');
+          this.anthropicSaveMessage.set(res?.message || '✓ Anthropic API key cleared.');
           setTimeout(() => this.anthropicSaveMessage.set(null), 5000);
         },
         error: (err) => {
           this.isSavingAnthropicConfig.set(false);
-          this.anthropicSaveError.set(err?.error?.detail || err?.message || 'Failed to save default model.');
+          this.anthropicSaveError.set(err?.error?.detail || err?.message || 'Failed to clear Anthropic API key.');
         }
       });
-    };
-
-    if (saveKey$) {
-      saveKey$.subscribe({ next: afterKey, error: (err) => {
-        this.isSavingAnthropicConfig.set(false);
-        this.anthropicSaveError.set(err?.error?.detail || err?.message || 'Failed to update Anthropic API key.');
-      }});
     } else {
-      afterKey();
+      this.anthropicSaveMessage.set('✓ Anthropic API key cleared.');
+      setTimeout(() => this.anthropicSaveMessage.set(null), 3000);
     }
   }
 
-  public testAnthropicConfig(): void {
+  public testAnthropicKey(): void {
     const key = this.anthropicKeyInput().trim();
     if (!key) return;
     this.isTestingAnthropicConfig.set(true);
     this.anthropicSaveError.set(null);
     this.anthropicSaveMessage.set(null);
 
-    this.systemService.testApiKey('anthropic', key, this.anthropicBaseUrlInput().trim() || undefined).subscribe({
+    this.systemService.testApiKey('anthropic', key).subscribe({
       next: (res) => {
         this.isTestingAnthropicConfig.set(false);
         if (res?.valid) {
-          this.anthropicSaveMessage.set(res?.message || '✓ Anthropic-compatible endpoint is valid!');
+          this.anthropicSaveMessage.set(res?.message || '✓ Anthropic API key is valid!');
         } else {
-          this.anthropicSaveError.set(res?.message || 'Endpoint verification failed.');
+          this.anthropicSaveError.set(res?.message || 'Anthropic API key verification failed.');
         }
         setTimeout(() => this.anthropicSaveMessage.set(null), 5000);
       },
       error: (err) => {
         this.isTestingAnthropicConfig.set(false);
-        this.anthropicSaveError.set(err?.error?.detail || err?.message || 'Endpoint test failed.');
+        this.anthropicSaveError.set(err?.error?.detail || err?.message || 'Anthropic API key test failed.');
       }
     });
   }

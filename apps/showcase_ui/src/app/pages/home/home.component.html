@@ -363,9 +363,9 @@
           </div>
           <div class="choice-text">
             <div class="choice-title-row">
-              <span class="choice-title">Anthropic 兼容</span>
+              <span class="choice-title">Anthropic</span>
             </div>
-            <p class="choice-desc">Any Anthropic-protocol endpoint: Anthropic Claude or a compatible gateway.</p>
+            <p class="choice-desc">Claude models via the official Anthropic API.</p>
           </div>
         </div>
       </div>
@@ -467,76 +467,60 @@
     <div class="credentials-input-box">
       <div class="input-box-header">
         <div class="header-label">
-          <span class="material-symbols-outlined label-icon">dns</span>
-          <span>Base URL (optional — leave blank for api.anthropic.com):</span>
-        </div>
-      </div>
-      <div class="unified-key-row">
-        <div class="unified-key-wrapper">
-          <input type="text" class="unified-key-input" [ngModel]="anthropicBaseUrlInput()"
-            (ngModelChange)="anthropicBaseUrlInput.set($event); onAnthropicConfigChange()"
-            placeholder="https://anthropic-gateway.internal/v1" spellcheck="false" autocomplete="off" />
-        </div>
-      </div>
-    </div>
-
-    <div class="credentials-input-box">
-      <div class="input-box-header">
-        <div class="header-label">
-          <span class="material-symbols-outlined label-icon">model_training</span>
-          <span>Model:</span>
-        </div>
-      </div>
-      <div class="unified-key-row">
-        <div class="unified-key-wrapper">
-          <input type="text" class="unified-key-input" [ngModel]="anthropicModelInput()"
-            (ngModelChange)="anthropicModelInput.set($event); onAnthropicConfigChange()"
-            placeholder="e.g. claude-3-7-sonnet-20250219" spellcheck="false" autocomplete="off" />
-        </div>
-      </div>
-    </div>
-
-    <div class="credentials-input-box">
-      <div class="input-box-header">
-        <div class="header-label">
           <span class="material-symbols-outlined label-icon">vpn_key</span>
-          <span>API Key:</span>
+          <span>Enter Anthropic API Key:</span>
         </div>
+        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
+          class="btn-header-link">
+          <span class="material-symbols-outlined">open_in_new</span>
+          <span>Get API Key (Anthropic Console)</span>
+        </a>
       </div>
+
       <div class="unified-key-row">
         <div class="unified-key-wrapper">
           <span class="material-symbols-outlined key-prefix-icon">key</span>
           <input [type]="showAnthropicKey() ? 'text' : 'password'" class="unified-key-input"
             [class.is-masked]="!showAnthropicKey()" [ngModel]="anthropicKeyInput()"
-            (ngModelChange)="anthropicKeyInput.set($event); onAnthropicConfigChange()"
-            placeholder="Enter API Key..." spellcheck="false" autocomplete="off" />
+            (ngModelChange)="onAnthropicKeyChange($event)" placeholder="Enter Anthropic API Key (e.g. sk-ant-...)"
+            spellcheck="false" autocomplete="off" />
+
           <button type="button" class="btn-icon-action" [title]="showAnthropicKey() ? 'Mask Key' : 'Show Plaintext'"
             (click)="toggleAnthropicKeyVisibility()">
             <span class="material-symbols-outlined">{{ showAnthropicKey() ? 'visibility_off' : 'visibility' }}</span>
           </button>
+
+          @if (anthropicKeyInput()) {
+          <button type="button" class="btn-icon-action" title="Copy API Key"
+            (click)="copyToClipboard(anthropicKeyInput(), 'anthropic_key_field')">
+            <span class="material-symbols-outlined" [class.text-emerald]="copiedId() === 'anthropic_key_field'">
+              {{ copiedId() === 'anthropic_key_field' ? 'check' : 'content_copy' }}
+            </span>
+          </button>
+          }
         </div>
 
         <button type="button" class="btn-unified-save" [class.btn-dirty]="isAnthropicKeyModified()"
-          [disabled]="isSavingAnthropicConfig() || isTestingAnthropicConfig() || !anthropicModelInput().trim()"
-          (click)="saveAnthropicConfig()">
+          [disabled]="isSavingAnthropicConfig() || isTestingAnthropicConfig() || (!isAnthropicKeyModified() && !anthropicKeyInput().trim())"
+          (click)="saveAnthropicKey()">
           @if (isSavingAnthropicConfig()) {
           <span class="material-symbols-outlined spin">sync</span>
-          <span>Saving...</span>
+          <span>{{ anthropicKeyInput().trim() ? 'Verifying & Saving...' : 'Clearing...' }}</span>
           } @else {
-          <span class="material-symbols-outlined">save</span>
-          <span>Save & Apply</span>
+          <span class="material-symbols-outlined">{{ anthropicKeyInput().trim() ? 'save' : 'delete_outline' }}</span>
+          <span>{{ !anthropicKeyInput().trim() ? 'Clear Key' : (isAnthropicKeyModified() ? 'Save & Apply' : 'Save Key') }}</span>
           }
         </button>
 
-        <button type="button" class="btn-unified-test" title="Test connectivity and key validity"
+        <button type="button" class="btn-unified-test" title="Test if Anthropic API key is valid"
           [disabled]="isTestingAnthropicConfig() || isSavingAnthropicConfig() || !anthropicKeyInput().trim()"
-          (click)="testAnthropicConfig()">
+          (click)="testAnthropicKey()">
           @if (isTestingAnthropicConfig()) {
           <span class="material-symbols-outlined spin">sync</span>
           <span>Testing...</span>
           } @else {
           <span class="material-symbols-outlined">network_check</span>
-          <span>Test</span>
+          <span>Test Key</span>
           }
         </button>
       </div>
