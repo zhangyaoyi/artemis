@@ -80,6 +80,13 @@ async def run_scheduled_task(preset_id: str, schedule_id: str) -> None:
 
     await task_queue_service.enqueue_tasks([preset["goal"]], profile=preset["profile"])
     schedule_status_repository.set(schedule_id, datetime.now().isoformat(), "queued")
+    # A fired one-shot ("once") job is auto-removed by APScheduler the
+    # moment it has no next fire time -- nothing can ever look up its
+    # status again (there is no run-history view), so leaving the row
+    # behind would only accumulate forever. A still-scheduled ("cron")
+    # job is untouched by this check, since its job survives firing.
+    if task_scheduler_service.scheduler.get_job(schedule_id) is None:
+        schedule_status_repository.delete(schedule_id)
 
 
 def _build_trigger(schedule_type: str, run_at: str | None, cron_expression: str | None) -> Any:

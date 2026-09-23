@@ -34,6 +34,9 @@
         <label class="sf-field">
           <span class="sf-label">Cron Expression</span>
           <input type="text" [ngModel]="cronExpression()" (ngModelChange)="cronExpression.set($event)" placeholder="e.g. 0 9 * * 1,3,5" />
+          <span class="sf-help-text">
+            Minute Hour Day Month Weekday, in the server's local time. Weekday: 0 = Monday ... 6 = Sunday (not the standard crontab convention, where 0 = Sunday).
+          </span>
         </label>
       }
     </div>

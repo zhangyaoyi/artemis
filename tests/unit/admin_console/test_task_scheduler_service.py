@@ -267,18 +267,50 @@ async def test_job_fires_via_real_scheduler_loop(tmp_path, monkeypatch):
         created = svc.create_schedule("preset-1", "once", run_at=run_at)
 
         # Generous margin: this assertion is about *whether* the scheduler
-        # fires the job at all, not about its timing precision.
+        # fires the job at all, not about its timing precision. Poll on the
+        # queue call rather than the status row: a fired `once` job's status
+        # row is deleted again immediately (it was auto-removed from the
+        # scheduler by the time run_scheduled_task's cleanup check runs), so
+        # it is not a reliable "did it fire" signal to poll on.
         for _ in range(40):
             await asyncio.sleep(0.1)
-            if status_repo.get(created["id"]) is not None:
+            if fake_queue.calls:
                 break
 
-        status = status_repo.get(created["id"])
-        assert status is not None, "scheduler never fired the job"
-        assert status["last_status"] == "queued"
         assert fake_queue.calls == [{"goals": ["Do the thing"], "profile": "flash"}]
+        assert svc.get_schedule(created["id"]) is None, "fired once-job should be auto-removed"
+        assert status_repo.get(created["id"]) is None, "fired once-job's status row should be cleaned up"
     finally:
         svc.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_run_scheduled_task_cleans_up_status_for_a_removed_once_job(env):
+    """A fired one-shot's status row is cleaned up, not left orphaned.
+
+    Manually removing the job simulates what APScheduler's own firing
+    machinery does to a `once` job right after it runs -- deterministic and
+    fast, unlike waiting on the real timer (covered separately by
+    `test_job_fires_via_real_scheduler_loop`).
+    """
+    run_at = (datetime.now() + timedelta(days=1)).isoformat()
+    created = env.service.create_schedule("preset-1", "once", run_at=run_at)
+    env.service.scheduler.remove_job(created["id"])
+
+    await scheduler_module.run_scheduled_task("preset-1", created["id"])
+
+    assert env.queue.calls == [{"goals": ["Do the thing"], "profile": "flash"}]
+    assert env.status_repo.get(created["id"]) is None
+
+
+@pytest.mark.asyncio
+async def test_run_scheduled_task_keeps_status_for_a_still_scheduled_cron_job(env):
+    created = env.service.create_schedule("preset-1", "cron", cron_expression="0 9 * * *")
+
+    await scheduler_module.run_scheduled_task("preset-1", created["id"])
+
+    status = env.status_repo.get(created["id"])
+    assert status["last_status"] == "queued"
 
 
 @pytest.mark.asyncio

@@ -15,13 +15,14 @@
  */
 
 import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { Schedule, ScheduleService, ScheduleWritePayload } from '../../core/services/schedule.service';
 import { ScheduleFormComponent } from '../../components/schedule-form/schedule-form.component';
 
 @Component({
   selector: 'app-schedules',
   standalone: true,
-  imports: [ScheduleFormComponent],
+  imports: [ScheduleFormComponent, DatePipe],
   templateUrl: './schedules.component.html',
   styleUrl: './schedules.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

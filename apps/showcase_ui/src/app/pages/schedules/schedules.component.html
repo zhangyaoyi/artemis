@@ -21,12 +21,12 @@
           </span>
         </div>
         <div class="sp-card-detail">
-          {{ schedule.scheduleType === 'once' ? schedule.runAt : schedule.cronExpression }}
+          {{ schedule.scheduleType === 'once' ? (schedule.runAt | date:'medium') : schedule.cronExpression }}
         </div>
         <div class="sp-card-meta">
-          <span>Next run: {{ schedule.nextRunTime || (schedule.paused ? 'Paused' : '—') }}</span>
+          <span>Next run: {{ schedule.nextRunTime ? (schedule.nextRunTime | date:'medium') : (schedule.paused ? 'Paused' : '—') }}</span>
           @if (schedule.lastRunAt) {
-            <span>Last run: {{ schedule.lastRunAt }} ({{ schedule.lastStatus }})</span>
+            <span>Last run: {{ schedule.lastRunAt | date:'medium' }} ({{ schedule.lastStatus }})</span>
           }
         </div>
         <div class="sp-card-actions">
