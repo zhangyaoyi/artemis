@@ -493,6 +493,68 @@ async def get_model_config_and_env():
     }
 
 
+class UpdateDefaultModelRequest(BaseModel):
+    """Payload to set the global default model's provider/model/base URL."""
+
+    provider: str = Field(description="Protocol family: 'openai' or 'anthropic'")
+    model: str = Field(description="Model name/identifier for the target endpoint")
+    api_base: str | None = Field(
+        default=None,
+        description="Custom base URL; omitted/blank uses the protocol's own default endpoint",
+    )
+
+
+@router.post("/model-config-env")
+async def update_default_model_config(request: UpdateDefaultModelRequest):
+    """Persist the global default model's provider/model/base URL into artemis.jsonc."""
+    import json
+
+    from artemis.config.paths import get_config_path
+    from artemis.utils.file import replace_jsonc_top_level_block, strip_json_comments
+
+    provider = request.provider.strip().lower()
+    if provider not in ("openai", "anthropic"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported protocol '{provider}'. Must be 'openai' or 'anthropic'.",
+        )
+
+    model = request.model.strip()
+    if not model:
+        raise HTTPException(status_code=400, detail="Model name cannot be empty.")
+
+    try:
+        config_path_obj = get_config_path("artemis.jsonc")
+        content = config_path_obj.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=500, detail=f"artemis.jsonc not found: {exc}")
+
+    parsed = json.loads(strip_json_comments(content))
+    if "default" not in parsed:
+        raise HTTPException(
+            status_code=500,
+            detail="artemis.jsonc has no top-level 'default' block to update.",
+        )
+
+    new_default: dict = {"provider": provider, "model": model}
+    api_base = (request.api_base or "").strip()
+    if api_base:
+        new_default["api_base"] = api_base
+
+    try:
+        new_content = replace_jsonc_top_level_block(content, "default", new_default)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    config_path_obj.write_text(new_content, encoding="utf-8")
+
+    return {
+        "status": "success",
+        "message": f"Default model set to {provider}/{model}.",
+        "default_model": new_default,
+    }
+
+
 @router.get("/server-status")
 async def get_server_runtime_status():
     """Retrieve runtime status, PID, port, and uptime of the Artemis server."""
