@@ -1,6 +1,18 @@
-<div class="sp-page">
+<div class="sp-container">
+  <!-- Dynamic Aurora Glow Background, matching the Home page -->
+  <div class="aurora-background">
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+    <div class="glow glow-3"></div>
+  </div>
+
+  <div class="sp-page">
+  <section class="sp-hero">
+    <h1 class="sp-hero-title">What should run itself, and when?</h1>
+  </section>
+
   <div class="sp-header">
-    <h2>Task Scheduler</h2>
+    <h2>Scheduled Tasks</h2>
     <button type="button" class="sp-btn-primary" (click)="openAddModal()">
       <span class="material-symbols-outlined">add</span>
       <span>New Schedule</span>
@@ -50,4 +62,5 @@
       (cancel)="closeModal()"
     />
   }
+  </div>
 </div>
