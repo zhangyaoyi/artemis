@@ -271,6 +271,9 @@ class UpdateCredentialsRequest(BaseModel):
     persist_to_env: bool = Field(
         default=True, description="Whether to persist the key to .env file"
     )
+    base_url: str | None = Field(
+        default=None, description="Optional custom base URL to validate the key against"
+    )
 
 
 class ValidateCredentialsRequest(BaseModel):
@@ -340,7 +343,9 @@ async def update_credentials(request: UpdateCredentialsRequest):
 
     # If a non-empty key is provided, verify it before saving
     if key:
-        is_valid, validation_msg = await validate_api_key(provider=provider, api_key=key)
+        is_valid, validation_msg = await validate_api_key(
+            provider=provider, api_key=key, base_url=request.base_url
+        )
         if not is_valid:
             raise HTTPException(
                 status_code=400,
@@ -509,7 +514,8 @@ async def update_default_model_config(request: UpdateDefaultModelRequest):
     """Persist the global default model's provider/model/base URL into artemis.jsonc."""
     import json
 
-    from artemis.config.paths import get_config_path
+    from artemis.config.paths import get_app_dir, get_config_path
+    from artemis.config import paths as artemis_paths
     from artemis.utils.file import replace_jsonc_top_level_block, strip_json_comments
 
     provider = request.provider.strip().lower()
@@ -526,27 +532,73 @@ async def update_default_model_config(request: UpdateDefaultModelRequest):
     try:
         config_path_obj = get_config_path("artemis.jsonc")
         content = config_path_obj.read_text(encoding="utf-8")
+        if artemis_paths._use_user_app_dir():
+            # get_config_path() can resolve to the immutable, wheel-bundled
+            # template. Persist edits to the writable app dir instead,
+            # seeding it from whatever config we just read if it doesn't
+            # have its own copy yet.
+            app_dir = get_app_dir()
+            app_dir.mkdir(parents=True, exist_ok=True)
+            app_dir_path = app_dir / "artemis.jsonc"
+            if app_dir_path != config_path_obj:
+                if app_dir_path.exists():
+                    content = app_dir_path.read_text(encoding="utf-8")
+                else:
+                    app_dir_path.write_text(content, encoding="utf-8")
+                config_path_obj = app_dir_path
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=f"artemis.jsonc not found: {exc}")
 
-    parsed = json.loads(strip_json_comments(content))
+    try:
+        parsed = json.loads(strip_json_comments(content))
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=500, detail=f"artemis.jsonc is not valid JSONC: {exc}")
+
     if "default" not in parsed:
         raise HTTPException(
             status_code=500,
             detail="artemis.jsonc has no top-level 'default' block to update.",
         )
 
-    new_default: dict = {"provider": provider, "model": model}
     api_base = (request.api_base or "").strip()
+    new_default: dict = {"provider": provider, "model": model}
+    fallback: dict = {"provider": provider, "model": model}
     if api_base:
         new_default["api_base"] = api_base
+        fallback["api_base"] = api_base
+    new_default["fallback"] = fallback
 
     try:
         new_content = replace_jsonc_top_level_block(content, "default", new_default)
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
-    config_path_obj.write_text(new_content, encoding="utf-8")
+    # Verify the rewrite is well-formed and holds exactly the intended
+    # change before touching disk: a silently corrupted or truncated write
+    # is worse than refusing to save.
+    try:
+        reparsed = json.loads(strip_json_comments(new_content))
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Refusing to save: rewritten artemis.jsonc failed to verify ({exc}).",
+        )
+    if reparsed.get("default") != new_default:
+        raise HTTPException(
+            status_code=500,
+            detail="Refusing to save: rewritten artemis.jsonc did not verify.",
+        )
+    other_keys_before = {k: v for k, v in parsed.items() if k != "default"}
+    other_keys_after = {k: v for k, v in reparsed.items() if k != "default"}
+    if other_keys_before != other_keys_after:
+        raise HTTPException(
+            status_code=500,
+            detail="Refusing to save: rewrite altered config outside the 'default' block.",
+        )
+
+    tmp_path = config_path_obj.with_suffix(config_path_obj.suffix + ".tmp")
+    tmp_path.write_text(new_content, encoding="utf-8")
+    tmp_path.replace(config_path_obj)
 
     return {
         "status": "success",

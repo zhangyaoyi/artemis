@@ -659,7 +659,13 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.anthropicBaseUrlInput.set(apiBase);
       } else if (openaiLikeProviders.includes(provider)) {
         this.openaiModelInput.set(model);
-        this.openaiBaseUrlInput.set(apiBase);
+        // A legacy provider (openrouter/xai/ollama/vllm/custom) with no
+        // explicit api_base was actually resolving against that provider's
+        // own real endpoint (artemis/llm/router.py's per-provider default),
+        // not api.openai.com. Pre-fill the field with that real default so
+        // a Save without editing Base URL doesn't silently re-point traffic
+        // to OpenAI's official API.
+        this.openaiBaseUrlInput.set(apiBase || this.legacyProviderDefaultBaseUrl(provider));
       }
     });
   }
@@ -736,6 +742,25 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   public setModelSetupMode(mode: 'gemini' | 'openai' | 'anthropic'): void {
     this.modelSetupMode.set(mode);
+  }
+
+  /**
+   * The real endpoint a legacy provider without an explicit api_base
+   * actually resolves against, per artemis/llm/router.py's own per-provider
+   * fallback -- used to pre-fill the OpenAI-compatible card's Base URL field
+   * so re-saving doesn't silently switch it to OpenAI's official endpoint.
+   */
+  private legacyProviderDefaultBaseUrl(provider: string): string {
+    switch (provider) {
+      case 'openrouter': return 'https://openrouter.ai/api/v1';
+      case 'xai': return 'https://api.x.ai/v1';
+      case 'ollama':
+      case 'vllm':
+      case 'custom':
+        return 'http://localhost:8000/v1';
+      default:
+        return '';
+    }
   }
 
   public toggleAdvancedInspector(): void {
@@ -915,7 +940,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     const baseUrl = this.openaiBaseUrlInput().trim() || null;
 
     const saveKey$ = key
-      ? this.systemService.updateApiKey('openai', key, true)
+      ? this.systemService.updateApiKey('openai', key, true, baseUrl || undefined)
       : null;
 
     const afterKey = () => {
@@ -987,7 +1012,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     const baseUrl = this.anthropicBaseUrlInput().trim() || null;
 
     const saveKey$ = key
-      ? this.systemService.updateApiKey('anthropic', key, true)
+      ? this.systemService.updateApiKey('anthropic', key, true, baseUrl || undefined)
       : null;
 
     const afterKey = () => {

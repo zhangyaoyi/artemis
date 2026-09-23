@@ -557,11 +557,12 @@ export class SystemService {
   /**
    * Update, verify, and configure API key for an LLM provider or Vision OCR
    */
-  public updateApiKey(provider: string, apiKey: string, persistToEnv: boolean = true): Observable<any> {
+  public updateApiKey(provider: string, apiKey: string, persistToEnv: boolean = true, baseUrl?: string): Observable<any> {
     return this.http.post<any>('/api/system/credentials', {
       provider,
       api_key: apiKey,
-      persist_to_env: persistToEnv
+      persist_to_env: persistToEnv,
+      ...(baseUrl ? { base_url: baseUrl } : {})
     }).pipe(
       tap({
         next: (res) => {

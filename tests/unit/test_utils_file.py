@@ -105,6 +105,46 @@ def test_missing_key_raises_value_error():
         replace_jsonc_top_level_block(SAMPLE, "nonexistent", {"a": 1})
 
 
+def test_ignores_a_key_name_mentioned_inside_a_comment_before_the_real_key():
+    content = """{
+  // this comment mentions "default" but is not the real key
+  "other": { "x": 1 },
+  "default": { "provider": "google", "model": "gemini-3.8-flash" }
+}
+"""
+    result = replace_jsonc_top_level_block(
+        content, "default", {"provider": "openai", "model": "gpt-4o"}
+    )
+
+    assert '"provider": "google"' not in result
+    parsed = json.loads(strip_json_comments(result))
+    assert parsed["default"] == {"provider": "openai", "model": "gpt-4o"}
+    assert parsed["other"] == {"x": 1}
+
+
+def test_ignores_braces_inside_a_comment_within_the_target_block():
+    content = """{
+  "default": {
+    "provider": "custom",
+    "model": "qwen3.8"
+    // was previously: {
+  },
+  "nodes": {
+    "planner": { "provider": "anthropic", "model": "claude-opus-4" }
+  }
+}
+"""
+    result = replace_jsonc_top_level_block(
+        content, "default", {"provider": "openai", "model": "gpt-4o"}
+    )
+
+    parsed = json.loads(strip_json_comments(result))
+    assert parsed["default"] == {"provider": "openai", "model": "gpt-4o"}
+    # A comment-aware scanner must not let the commented-out '{' end the block
+    # early and truncate the rest of the document.
+    assert parsed["nodes"]["planner"]["model"] == "claude-opus-4"
+
+
 def test_preserves_indentation_of_replacement_block():
     result = replace_jsonc_top_level_block(
         SAMPLE, "presets", {"a": {"provider": "openai", "model": "gpt-4o"}}

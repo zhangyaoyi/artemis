@@ -171,6 +171,23 @@ describe('SystemService readiness polling', () => {
     expect(service.adbServerStatus()?.endpoint.port).toBe(5037);
   });
 
+  it('passes a custom base URL through when saving an API key', () => {
+    service.updateApiKey('openai', 'sk-deepseek-test-key', true, 'https://api.deepseek.com/v1').subscribe();
+
+    const req = http.expectOne('/api/system/credentials');
+    expect(req.request.body).toEqual({
+      provider: 'openai',
+      api_key: 'sk-deepseek-test-key',
+      persist_to_env: true,
+      base_url: 'https://api.deepseek.com/v1'
+    });
+    req.flush({ status: 'success' });
+
+    http.expectOne('/api/system/model-config-env').flush({
+      status: 'success', message: 'ok', default_model: {}
+    });
+  });
+
   it('saves the default model provider/model/base URL', () => {
     let result: any;
     service.saveDefaultModel('openai', 'deepseek-chat', 'https://api.deepseek.com/v1')

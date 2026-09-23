@@ -136,7 +136,11 @@ async def validate_api_key(
                 return False, f"OpenAI API verification failed ({resp.status_code}): {err_msg}"
 
             elif clean_provider in ("anthropic", "claude"):
-                url = "https://api.anthropic.com/v1/models"
+                url = (
+                    f"{base_url.rstrip('/')}/models"
+                    if base_url
+                    else "https://api.anthropic.com/v1/models"
+                )
                 resp = await client.get(
                     url,
                     headers={
