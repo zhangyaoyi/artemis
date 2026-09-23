@@ -489,12 +489,11 @@ export class HomeComponent implements OnInit, OnDestroy {
     return meta?.['configured'] === true;
   });
 
-  public currentApiKey = computed<string>(() => this.systemService.currentApiKey());
   public apiKeysMap = computed<Record<string, string>>(() => this.systemService.apiKeysMap());
 
   public savedGeminiKey = computed<string>(() => {
     const keys = this.apiKeysMap();
-    return keys['google'] || this.currentApiKey() || '';
+    return keys['google'] || '';
   });
 
   public isGeminiModified = computed<boolean>(() => {
@@ -623,8 +622,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   constructor() {
     effect(() => {
       const keys = this.systemService.apiKeysMap();
-      const current = this.systemService.currentApiKey();
-      const googleKey = keys['google'] || current || '';
+      const googleKey = keys['google'] || '';
       const ocrKey = keys['ocr'] || '';
       const openaiKey = keys['openai'] || '';
       const anthropicKey = keys['anthropic'] || '';
