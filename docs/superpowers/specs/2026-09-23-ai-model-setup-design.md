@@ -80,10 +80,12 @@ of enumerating named providers in the UI.
 
 ### 3. Backend API (`apps/admin_console/routers/system.py`)
 
-- `GET /model-config-env`: extend the existing response with the resolved
-  `api_base` for the current default, and a derived `protocol` field
-  (`"gemini" | "openai" | "anthropic"`) computed from `default.provider` per
-  the classification rule above.
+- `GET /model-config-env`: no backend change needed. `default_model` in its
+  response already echoes the raw `default` block from `artemis.jsonc`
+  verbatim (including `api_base`, once Task 2's schema field exists and a
+  save has written one) — the frontend derives the `"gemini" | "openai" |
+  "anthropic"` card classification from `default_model.provider` directly
+  per the rule above, rather than duplicating that logic on the backend.
 - New `POST /model-config`, body:
   ```json
   { "protocol": "openai" | "anthropic", "model": "string", "api_base": "string | null", "api_key": "string | null" }
