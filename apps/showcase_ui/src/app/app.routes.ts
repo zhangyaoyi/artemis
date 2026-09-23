@@ -18,10 +18,12 @@ import { Routes } from '@angular/router';
 import { HomeComponent } from './pages/home/home.component';
 import { WorkspaceComponent } from './pages/workspace/workspace.component';
 import { LegacyWorkspaceComponent } from './pages/legacy-workspace/legacy-workspace.component';
+import { SchedulesComponent } from './pages/schedules/schedules.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'workspace', component: WorkspaceComponent },
+  { path: 'schedules', component: SchedulesComponent },
   { path: 'check', component: LegacyWorkspaceComponent },
   { path: '**', redirectTo: '' }
 ];

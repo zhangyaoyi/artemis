@@ -1,0 +1,53 @@
+<div class="sp-page">
+  <div class="sp-header">
+    <h2>Task Scheduler</h2>
+    <button type="button" class="sp-btn-primary" (click)="openAddModal()">
+      <span class="material-symbols-outlined">add</span>
+      <span>New Schedule</span>
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="sp-error-banner">{{ errorMessage() }}</div>
+  }
+
+  <div class="sp-cards-grid">
+    @for (schedule of scheduleService.schedules(); track schedule.id) {
+      <div class="sp-card">
+        <div class="sp-card-header">
+          <span class="sp-card-title">{{ schedule.presetTitle }}</span>
+          <span class="sp-card-type" [class.sp-type-once]="schedule.scheduleType === 'once'">
+            {{ schedule.scheduleType === 'once' ? 'Once' : 'Cron' }}
+          </span>
+        </div>
+        <div class="sp-card-detail">
+          {{ schedule.scheduleType === 'once' ? schedule.runAt : schedule.cronExpression }}
+        </div>
+        <div class="sp-card-meta">
+          <span>Next run: {{ schedule.nextRunTime || (schedule.paused ? 'Paused' : '—') }}</span>
+          @if (schedule.lastRunAt) {
+            <span>Last run: {{ schedule.lastRunAt }} ({{ schedule.lastStatus }})</span>
+          }
+        </div>
+        <div class="sp-card-actions">
+          @if (schedule.scheduleType === 'cron') {
+            <button type="button" class="sp-btn-secondary" (click)="togglePause(schedule)">
+              {{ schedule.paused ? 'Resume' : 'Pause' }}
+            </button>
+          }
+          <button type="button" class="sp-btn-secondary" (click)="openEditModal(schedule)">Edit</button>
+          <button type="button" class="sp-btn-danger" (click)="deleteSchedule(schedule)">Delete</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (showModal()) {
+    <app-schedule-form
+      [editingSchedule]="editingSchedule()"
+      [errorText]="modalError()"
+      (save)="saveSchedule($event)"
+      (cancel)="closeModal()"
+    />
+  }
+</div>

@@ -43,6 +43,15 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         <span class="material-symbols-outlined tab-icon">space_dashboard</span>
         <span class="tab-label">Workspace</span>
       </a>
+      <a 
+        routerLink="/schedules" 
+        routerLinkActive="active"
+        class="nav-tab-btn"
+        title="Task Scheduler"
+      >
+        <span class="material-symbols-outlined tab-icon">schedule</span>
+        <span class="tab-label">Scheduler</span>
+      </a>
     </nav>
   `,
   changeDetection: ChangeDetectionStrategy.Eager,

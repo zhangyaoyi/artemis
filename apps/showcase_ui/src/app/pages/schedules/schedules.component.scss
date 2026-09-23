@@ -1,0 +1,132 @@
+.sp-page {
+  padding: 32px 40px 80px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.sp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+}
+
+.sp-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: none;
+  background: #1a73e8;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #1558b8;
+  }
+}
+
+.sp-error-banner {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.sp-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.sp-card {
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 14px;
+  padding: 16px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sp-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sp-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sp-card-type {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(26, 115, 232, 0.1);
+  color: #1a73e8;
+
+  &.sp-type-once {
+    background: rgba(100, 116, 139, 0.12);
+    color: #475569;
+  }
+}
+
+.sp-card-detail {
+  font-size: 12.5px;
+  color: #475569;
+  font-family: monospace;
+}
+
+.sp-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.sp-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.sp-btn-secondary,
+.sp-btn-danger {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: #ffffff;
+  color: #475569;
+
+  &:hover {
+    background: #f8fafc;
+  }
+}
+
+.sp-btn-danger:hover {
+  border-color: rgba(220, 38, 38, 0.4);
+  color: #dc2626;
+}
