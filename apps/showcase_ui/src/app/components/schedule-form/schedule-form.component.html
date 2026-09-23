@@ -31,9 +31,61 @@
           <input type="datetime-local" [ngModel]="runAt()" (ngModelChange)="runAt.set($event)" />
         </label>
       } @else {
+        <div class="sf-simple-schedule">
+          <div class="sf-simple-heading">
+            <div>
+              <span class="sf-label">Simple Schedule</span>
+              <span class="sf-help-text">Choose when this task should run. The cron expression below updates automatically.</span>
+            </div>
+            <span class="sf-simple-badge">Recommended</span>
+          </div>
+
+          <div class="sf-simple-grid">
+            <label class="sf-field">
+              <span class="sf-label">Repeat</span>
+              <select [ngModel]="simpleFrequency()" (ngModelChange)="setSimpleFrequency($event)">
+                <option value="daily">Every day</option>
+                <option value="weekdays">Weekdays (Mon–Fri)</option>
+                <option value="weekends">Weekends</option>
+                <option value="weekly">Every week</option>
+                <option value="monthly">Every month</option>
+                <option value="custom">Custom cron</option>
+              </select>
+            </label>
+
+            @if (simpleFrequency() !== 'custom') {
+              <label class="sf-field">
+                <span class="sf-label">Time</span>
+                <input type="time" [ngModel]="simpleTime()" (ngModelChange)="setSimpleTime($event)" />
+              </label>
+            }
+          </div>
+
+          @if (simpleFrequency() === 'weekly') {
+            <label class="sf-field">
+              <span class="sf-label">Day of week</span>
+              <select [ngModel]="simpleWeekday()" (ngModelChange)="setSimpleWeekday($event)">
+                @for (day of weekdays; track day.value) {
+                  <option [value]="day.value">{{ day.label }}</option>
+                }
+              </select>
+            </label>
+          } @else if (simpleFrequency() === 'monthly') {
+            <label class="sf-field">
+              <span class="sf-label">Day of month</span>
+              <input type="number" min="1" max="31" [ngModel]="simpleMonthDay()" (ngModelChange)="setSimpleMonthDay($event)" />
+            </label>
+          } @else if (simpleFrequency() === 'custom') {
+            <span class="sf-help-text">Use the advanced Cron Expression field below.</span>
+          }
+        </div>
+
         <label class="sf-field">
-          <span class="sf-label">Cron Expression</span>
-          <input type="text" [ngModel]="cronExpression()" (ngModelChange)="cronExpression.set($event)" placeholder="e.g. 0 9 * * 1,3,5" />
+          <span class="sf-label sf-advanced-label">
+            Cron Expression
+            <span>Advanced</span>
+          </span>
+          <input type="text" [ngModel]="cronExpression()" (ngModelChange)="onCronExpressionChange($event)" placeholder="e.g. 0 9 * * 1,3,5" />
           <span class="sf-help-text">
             Minute Hour Day Month Weekday, in the server's local time. Weekday: 0 = Monday ... 6 = Sunday (not the standard crontab convention, where 0 = Sunday).
           </span>

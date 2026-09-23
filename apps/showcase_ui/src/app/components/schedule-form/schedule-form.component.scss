@@ -120,6 +120,80 @@
   }
 }
 
+.sf-simple-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(147, 197, 253, 0.65);
+  border-radius: 12px;
+  background: rgba(239, 246, 255, 0.6);
+
+  .sf-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .sf-help-text {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.4;
+  }
+}
+
+.sf-simple-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+
+.sf-simple-badge {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(26, 115, 232, 0.12);
+  color: #1a73e8;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sf-simple-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(110px, 1fr);
+  gap: 10px;
+}
+
+.sf-advanced-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  span {
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+@media (max-width: 480px) {
+  .sf-simple-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .sf-footer {
   display: flex;
   align-items: center;
