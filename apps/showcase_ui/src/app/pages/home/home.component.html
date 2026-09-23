@@ -467,6 +467,22 @@
     <div class="credentials-input-box">
       <div class="input-box-header">
         <div class="header-label">
+          <span class="material-symbols-outlined label-icon">model_training</span>
+          <span>Model (optional — leave blank to keep the current default):</span>
+        </div>
+      </div>
+      <div class="unified-key-row">
+        <div class="unified-key-wrapper">
+          <input type="text" class="unified-key-input" [ngModel]="anthropicModelInput()"
+            (ngModelChange)="anthropicModelInput.set($event)"
+            placeholder="e.g. claude-3-7-sonnet-20250219" spellcheck="false" autocomplete="off" />
+        </div>
+      </div>
+    </div>
+
+    <div class="credentials-input-box">
+      <div class="input-box-header">
+        <div class="header-label">
           <span class="material-symbols-outlined label-icon">vpn_key</span>
           <span>Enter Anthropic API Key:</span>
         </div>
@@ -539,7 +555,24 @@
       }
     </div>
     } @else {
-    <!-- 1. Gemini API Key Box -->
+    <!-- 1. Gemini Model -->
+    <div class="credentials-input-box">
+      <div class="input-box-header">
+        <div class="header-label">
+          <span class="material-symbols-outlined label-icon">model_training</span>
+          <span>Model (optional — leave blank to keep the current default):</span>
+        </div>
+      </div>
+      <div class="unified-key-row">
+        <div class="unified-key-wrapper">
+          <input type="text" class="unified-key-input" [ngModel]="geminiModelInput()"
+            (ngModelChange)="geminiModelInput.set($event)"
+            placeholder="e.g. gemini-3.8-flash" spellcheck="false" autocomplete="off" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Gemini API Key Box -->
     <div class="credentials-input-box">
       <div class="input-box-header">
         <div class="header-label">

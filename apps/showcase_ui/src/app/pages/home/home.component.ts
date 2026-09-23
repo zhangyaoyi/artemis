@@ -130,6 +130,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   public modelConfigEnv = computed(() => this.systemService.modelConfigEnv());
 
   // Google Gemini API Key State
+  public geminiModelInput = signal<string>('');
   public geminiKeyInput = signal<string>('');
   public showGeminiKey = signal<boolean>(false);
   public isSavingGeminiKey = signal<boolean>(false);
@@ -150,6 +151,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   public isOpenaiKeyEdited = signal<boolean>(false);
 
   // Anthropic Setup State
+  public anthropicModelInput = signal<string>('');
   public anthropicKeyInput = signal<string>('');
   public showAnthropicKey = signal<boolean>(false);
   public isSavingAnthropicConfig = signal<boolean>(false);
@@ -648,11 +650,13 @@ export class HomeComponent implements OnInit, OnDestroy {
       const apiBase = cfg.default_model?.api_base || '';
       // openrouter/xai/ollama/vllm/custom all share the OpenAI-compatible
       // ChatOpenAI dispatch branch in artemis/llm/router.py, so they all
-      // land on the "OpenAI" card too. Anthropic has no Base URL/Model
-      // fields (it only manages ANTHROPIC_API_KEY, like the Gemini card),
-      // so there's nothing to pre-fill for it here.
+      // land on the "OpenAI" card too.
       const openaiLikeProviders = ['openai', 'openrouter', 'xai', 'ollama', 'vllm', 'custom'];
-      if (openaiLikeProviders.includes(provider)) {
+      if (provider === 'google') {
+        this.geminiModelInput.set(model);
+      } else if (provider === 'anthropic') {
+        this.anthropicModelInput.set(model);
+      } else if (openaiLikeProviders.includes(provider)) {
         this.openaiModelInput.set(model);
         // A legacy provider (openrouter/xai/ollama/vllm/custom) with no
         // explicit api_base was actually resolving against that provider's
@@ -791,12 +795,28 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.geminiSaveError.set(null);
     this.geminiSaveMessage.set(null);
 
+    const model = this.geminiModelInput().trim();
+
     this.systemService.updateApiKey('google', key, true).subscribe({
       next: (res) => {
-        this.isSavingGeminiKey.set(false);
         this.isGeminiKeyEdited.set(false);
-        this.geminiSaveMessage.set(res?.message || '✓ Gemini API key verified & saved successfully.');
-        setTimeout(() => this.geminiSaveMessage.set(null), 5000);
+        if (!model) {
+          this.isSavingGeminiKey.set(false);
+          this.geminiSaveMessage.set(res?.message || '✓ Gemini API key verified & saved successfully.');
+          setTimeout(() => this.geminiSaveMessage.set(null), 5000);
+          return;
+        }
+        this.systemService.saveDefaultModel('google', model, null).subscribe({
+          next: (modelRes) => {
+            this.isSavingGeminiKey.set(false);
+            this.geminiSaveMessage.set(modelRes?.message || '✓ Gemini API key & model saved successfully.');
+            setTimeout(() => this.geminiSaveMessage.set(null), 5000);
+          },
+          error: (err) => {
+            this.isSavingGeminiKey.set(false);
+            this.geminiSaveError.set(err?.error?.detail || err?.message || 'Failed to save default model.');
+          }
+        });
       },
       error: (err) => {
         this.isSavingGeminiKey.set(false);
@@ -986,12 +1006,28 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.anthropicSaveError.set(null);
     this.anthropicSaveMessage.set(null);
 
+    const model = this.anthropicModelInput().trim();
+
     this.systemService.updateApiKey('anthropic', key, true).subscribe({
       next: (res) => {
-        this.isSavingAnthropicConfig.set(false);
         this.isAnthropicKeyEdited.set(false);
-        this.anthropicSaveMessage.set(res?.message || '✓ Anthropic API key verified & saved successfully.');
-        setTimeout(() => this.anthropicSaveMessage.set(null), 5000);
+        if (!model) {
+          this.isSavingAnthropicConfig.set(false);
+          this.anthropicSaveMessage.set(res?.message || '✓ Anthropic API key verified & saved successfully.');
+          setTimeout(() => this.anthropicSaveMessage.set(null), 5000);
+          return;
+        }
+        this.systemService.saveDefaultModel('anthropic', model, null).subscribe({
+          next: (modelRes) => {
+            this.isSavingAnthropicConfig.set(false);
+            this.anthropicSaveMessage.set(modelRes?.message || '✓ Anthropic API key & model saved successfully.');
+            setTimeout(() => this.anthropicSaveMessage.set(null), 5000);
+          },
+          error: (err) => {
+            this.isSavingAnthropicConfig.set(false);
+            this.anthropicSaveError.set(err?.error?.detail || err?.message || 'Failed to save default model.');
+          }
+        });
       },
       error: (err) => {
         this.isSavingAnthropicConfig.set(false);

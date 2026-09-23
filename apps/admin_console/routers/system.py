@@ -519,10 +519,10 @@ async def update_default_model_config(request: UpdateDefaultModelRequest):
     from artemis.utils.file import replace_jsonc_top_level_block, strip_json_comments
 
     provider = request.provider.strip().lower()
-    if provider not in ("openai", "anthropic"):
+    if provider not in ("openai", "anthropic", "google"):
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported protocol '{provider}'. Must be 'openai' or 'anthropic'.",
+            detail=f"Unsupported protocol '{provider}'. Must be 'openai', 'anthropic', or 'google'.",
         )
 
     model = request.model.strip()

@@ -583,7 +583,7 @@ export class SystemService {
    * Persist the global default model's provider/model/base URL into artemis.jsonc.
    */
   public saveDefaultModel(
-    provider: 'openai' | 'anthropic',
+    provider: 'openai' | 'anthropic' | 'google',
     model: string,
     apiBase: string | null
   ): Observable<{ status: string; message: string; default_model: Record<string, string> }> {

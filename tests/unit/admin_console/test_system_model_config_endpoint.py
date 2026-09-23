@@ -136,9 +136,21 @@ async def test_rejects_unsupported_protocol(jsonc_file: Path):
     async with AsyncClient(transport=transport, base_url="http://localhost") as ac:
         res = await ac.post(
             "/api/system/model-config-env",
-            json={"provider": "google", "model": "gemini-3.8-flash"},
+            json={"provider": "openrouter", "model": "some-model"},
         )
     assert res.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_accepts_google_as_a_valid_protocol(jsonc_file: Path):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://localhost") as ac:
+        res = await ac.post(
+            "/api/system/model-config-env",
+            json={"provider": "google", "model": "gemini-3.8-flash"},
+        )
+    assert res.status_code == 200
+    assert res.json()["default_model"]["provider"] == "google"
 
 
 @pytest.mark.asyncio
