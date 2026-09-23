@@ -42,7 +42,7 @@ describe('ScheduleFormComponent', () => {
   afterEach(() => http.verify());
 
   it('defaults to the first preset and cron type in create mode', () => {
-    component.ngOnChanges({} as never);
+    component.ngOnChanges({ editingSchedule: {} as never });
 
     expect(component.presetId()).toBe('preset-1');
     expect(component.scheduleType()).toBe('cron');
@@ -72,7 +72,7 @@ describe('ScheduleFormComponent', () => {
   });
 
   it('requires a cron expression when schedule type is cron', () => {
-    component.ngOnChanges({} as never);
+    component.ngOnChanges({ editingSchedule: {} as never });
 
     expect(component.isValid).toBeFalse();
 
@@ -82,7 +82,7 @@ describe('ScheduleFormComponent', () => {
   });
 
   it('requires a run-at datetime when schedule type is once', () => {
-    component.ngOnChanges({} as never);
+    component.ngOnChanges({ editingSchedule: {} as never });
     component.scheduleType.set('once');
 
     expect(component.isValid).toBeFalse();
@@ -93,7 +93,7 @@ describe('ScheduleFormComponent', () => {
   });
 
   it('emits save with a cron payload', () => {
-    component.ngOnChanges({} as never);
+    component.ngOnChanges({ editingSchedule: {} as never });
     component.cronExpression.set('0 9 * * 1,3,5');
 
     let emitted: unknown = null;
@@ -109,7 +109,7 @@ describe('ScheduleFormComponent', () => {
   });
 
   it('emits save with a once payload', () => {
-    component.ngOnChanges({} as never);
+    component.ngOnChanges({ editingSchedule: {} as never });
     component.scheduleType.set('once');
     component.runAt.set('2026-09-25T09:00');
 
@@ -123,6 +123,21 @@ describe('ScheduleFormComponent', () => {
       run_at: '2026-09-25T09:00',
       cron_expression: null
     });
+  });
+
+  it('keeps user input when only errorText changes (failed save)', () => {
+    component.ngOnChanges({ editingSchedule: {} as never });
+    component.scheduleType.set('once');
+    component.runAt.set('2026-09-25T09:00');
+
+    // What a failed save looks like: SchedulesComponent sets modalError,
+    // which is bound to [errorText] -- editingSchedule is untouched.
+    component.errorText = 'run_at must be in the future.';
+    component.ngOnChanges({ errorText: {} as never });
+
+    expect(component.scheduleType()).toBe('once');
+    expect(component.runAt()).toBe('2026-09-25T09:00');
+    expect(component.isValid).toBeTrue();
   });
 
   it('emits cancel', () => {

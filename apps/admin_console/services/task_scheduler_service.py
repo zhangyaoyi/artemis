@@ -23,6 +23,7 @@ APScheduler's job store has no place for).
 """
 
 import asyncio
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -52,6 +53,8 @@ except ImportError:
         task_preset_repository,
     )
     from apps.admin_console.services.task_queue_service import task_queue_service
+
+logger = logging.getLogger(__name__)
 
 
 async def run_scheduled_task(preset_id: str, schedule_id: str) -> None:
@@ -91,7 +94,13 @@ def _build_trigger(schedule_type: str, run_at: str | None, cron_expression: str 
             run_date = datetime.fromisoformat(run_at)
         except ValueError as exc:
             raise ValueError(f"Invalid run_at datetime: {run_at!r}") from exc
-        if run_date <= datetime.now():
+        # `DateTrigger` localizes a naive run_date to the scheduler's
+        # timezone, so a `run_at` read back off an existing job (and edited)
+        # arrives here *aware*. Comparing an aware and a naive datetime
+        # raises TypeError -- which the router does not map to a 422 --
+        # so pick a `now` that matches whichever form we were given.
+        now = datetime.now(run_date.tzinfo) if run_date.tzinfo is not None else datetime.now()
+        if run_date <= now:
             raise ValueError("run_at must be in the future.")
         return DateTrigger(run_date=run_date)
     if schedule_type == "cron":
@@ -153,6 +162,10 @@ class TaskSchedulerService:
             # else will ever run or close it), so track it for shutdown().
             event_loop = asyncio.new_event_loop()
             self._owned_event_loop = event_loop
+            logger.warning(
+                "TaskSchedulerService.start() called outside a running event loop; "
+                "scheduled jobs will be added but their triggers will not fire."
+            )
         self.scheduler = AsyncIOScheduler(
             event_loop=event_loop,
             jobstores={"default": SQLAlchemyJobStore(url=f"sqlite:///{self.db_path}")},
@@ -177,7 +190,12 @@ class TaskSchedulerService:
             "preset_id": preset_id,
             "preset_title": preset["title"] if preset else "(preset deleted)",
             "schedule_type": "cron" if is_cron else "once",
-            "run_at": None if is_cron else job.trigger.run_date.isoformat(),
+            # Emitted in the exact shape `<input type="datetime-local">`
+            # accepts: no UTC offset, no microseconds. `.isoformat()` would
+            # include both (DateTrigger localizes its run_date), and the
+            # HTML spec makes such an input render *blank* rather than
+            # error -- while the value still round-trips back on save.
+            "run_at": None if is_cron else job.trigger.run_date.strftime("%Y-%m-%dT%H:%M"),
             "cron_expression": _crontab_from_trigger(job.trigger) if is_cron else None,
             "next_run_time": job.next_run_time.isoformat() if job.next_run_time else None,
             "paused": job.next_run_time is None,

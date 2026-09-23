@@ -39,7 +39,17 @@ export class ScheduleFormComponent implements OnChanges {
   public runAt = signal<string>('');
   public cronExpression = signal<string>('');
 
-  ngOnChanges(_changes: SimpleChanges): void {
+  ngOnChanges(changes: SimpleChanges): void {
+    // Only (re-)derive the form when the schedule being edited actually
+    // changed. Without this guard, a failed save -- which flows back in as
+    // a new [errorText] binding -- would reset every field and wipe what
+    // the user typed. Angular includes every bound @Input in a component's
+    // very first SimpleChanges, and SchedulesComponent recreates this
+    // component on each modal open (@if (showModal())), so both the
+    // create and edit paths still initialize correctly on open.
+    if (!changes['editingSchedule']) {
+      return;
+    }
     const schedule = this.editingSchedule;
     const tasks = this.taskRecService.allTasks();
     this.presetId.set(schedule?.presetId ?? tasks[0]?.id ?? '');
