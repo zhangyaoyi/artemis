@@ -16,7 +16,6 @@
 
 export interface AppReference {
   name: string;
-  icon: string;
   pkg?: string;
   category?: string;
   isBuiltin?: boolean;
@@ -43,32 +42,3 @@ export interface SmartSuggestion {
   priority?: number;
   isBuiltin?: boolean;
 }
-
-/**
- * Fixed set of Material Symbols icon names offered when adding or editing
- * an app in the registry. This stays a static frontend list (unlike the
- * app registry itself, which is backend-owned) since it's UI-picker
- * metadata that only changes per-release, not per-user.
- */
-export const ICON_OPTIONS: string[] = [
-  'account_balance_wallet',
-  'auto_stories',
-  'calculate',
-  'calendar_month',
-  'chat',
-  'explore',
-  'forum',
-  'headphones',
-  'mail',
-  'music_note',
-  'note_alt',
-  'photo_library',
-  'public',
-  'restaurant',
-  'settings',
-  'smart_display',
-  'star',
-  'storefront',
-  'timer',
-  'video_library'
-];

@@ -45,7 +45,6 @@
                 [class.selected]="isPkgSelected(app.pkg!)"
                 (click)="togglePkg(app.pkg!)"
               >
-                <span class="material-symbols-outlined">{{ app.icon }}</span>
                 <span>{{ app.name }}</span>
               </button>
               <div class="tpf-chip-actions">
@@ -70,11 +69,6 @@
               <input type="text" [ngModel]="appFormPkg()" (ngModelChange)="appFormPkg.set($event)" placeholder="Package name, e.g. com.example.app" />
             }
             <input type="text" [ngModel]="appFormName()" (ngModelChange)="appFormName.set($event)" placeholder="App name" />
-            <select [ngModel]="appFormIcon()" (ngModelChange)="appFormIcon.set($event)">
-              @for (icon of iconOptions; track icon) {
-                <option [value]="icon">{{ icon }}</option>
-              }
-            </select>
             <input type="text" [ngModel]="appFormCategory()" (ngModelChange)="appFormCategory.set($event)" placeholder="Category (optional)" />
             @if (appFormError()) {
               <span class="tpf-inline-error">{{ appFormError() }}</span>

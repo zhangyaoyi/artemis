@@ -22,20 +22,17 @@ import { AppReference } from '../data/smart-tasks.data';
 export interface AppWritePayload {
   pkg: string;
   name: string;
-  icon: string;
   category: string;
 }
 
 export interface AppUpdatePayload {
   name: string;
-  icon: string;
   category: string;
 }
 
 interface RawApp {
   pkg: string;
   name: string;
-  icon: string;
   category: string;
   is_builtin: boolean;
 }
@@ -44,7 +41,6 @@ function mapApp(raw: RawApp): AppReference {
   return {
     pkg: raw.pkg,
     name: raw.name,
-    icon: raw.icon,
     category: raw.category,
     isBuiltin: raw.is_builtin
   };

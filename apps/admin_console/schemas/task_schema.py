@@ -60,13 +60,11 @@ class TaskPresetWrite(BaseModel):
 class AppCreate(BaseModel):
     pkg: str
     name: str
-    icon: str
     category: str = "general"
 
 
 class AppUpdate(BaseModel):
     name: str
-    icon: str
     category: str = "general"
 
 

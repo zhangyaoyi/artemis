@@ -11,7 +11,6 @@ describe('AppRegistryService', () => {
   const rawApp = (overrides: Record<string, unknown> = {}) => ({
     pkg: 'com.android.chrome',
     name: 'Chrome',
-    icon: 'public',
     category: 'browser',
     is_builtin: true,
     ...overrides
@@ -48,7 +47,6 @@ describe('AppRegistryService', () => {
     service.createApp({
       pkg: 'com.example.newapp',
       name: 'New App',
-      icon: 'star',
       category: 'tools'
     }).subscribe();
 
@@ -65,7 +63,6 @@ describe('AppRegistryService', () => {
   it('updates an app by pkg then refreshes the list', () => {
     service.updateApp('com.android.chrome', {
       name: 'Renamed',
-      icon: 'public',
       category: 'browser'
     }).subscribe();
 

@@ -16,7 +16,7 @@
 
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AppReference, ICON_OPTIONS, SmartSuggestion } from '../../core/data/smart-tasks.data';
+import { AppReference, SmartSuggestion } from '../../core/data/smart-tasks.data';
 import { AppRegistryService, AppUpdatePayload, AppWritePayload } from '../../core/services/app-registry.service';
 import { TaskPresetWritePayload } from '../../core/services/task-recommendation.service';
 
@@ -34,7 +34,6 @@ export class TaskPresetFormComponent implements OnChanges {
   @Output() cancel = new EventEmitter<void>();
 
   public appRegistryService = inject(AppRegistryService);
-  public readonly iconOptions = ICON_OPTIONS;
 
   public title = signal<string>('');
   public description = signal<string>('');
@@ -48,7 +47,6 @@ export class TaskPresetFormComponent implements OnChanges {
   public editingApp = signal<AppReference | null>(null);
   public appFormPkg = signal<string>('');
   public appFormName = signal<string>('');
-  public appFormIcon = signal<string>(ICON_OPTIONS[0]);
   public appFormCategory = signal<string>('general');
   public appFormError = signal<string | null>(null);
   public appDeleteError = signal<string | null>(null);
@@ -108,7 +106,6 @@ export class TaskPresetFormComponent implements OnChanges {
     this.editingApp.set(null);
     this.appFormPkg.set('');
     this.appFormName.set('');
-    this.appFormIcon.set(ICON_OPTIONS[0]);
     this.appFormCategory.set('general');
     this.appFormError.set(null);
     this.showAppForm.set(true);
@@ -119,7 +116,6 @@ export class TaskPresetFormComponent implements OnChanges {
     this.editingApp.set(app);
     this.appFormPkg.set(app.pkg ?? '');
     this.appFormName.set(app.name);
-    this.appFormIcon.set(app.icon);
     this.appFormCategory.set(app.category ?? 'general');
     this.appFormError.set(null);
     this.showAppForm.set(true);
@@ -133,7 +129,7 @@ export class TaskPresetFormComponent implements OnChanges {
 
   public get isAppFormValid(): boolean {
     const pkgOk = this.editingApp() !== null || this.appFormPkg().trim().length > 0;
-    return pkgOk && this.appFormName().trim().length > 0 && this.appFormIcon().trim().length > 0;
+    return pkgOk && this.appFormName().trim().length > 0;
   }
 
   public saveApp(): void {
@@ -143,7 +139,6 @@ export class TaskPresetFormComponent implements OnChanges {
     const editing = this.editingApp();
     const updatePayload: AppUpdatePayload = {
       name: this.appFormName().trim(),
-      icon: this.appFormIcon(),
       category: this.appFormCategory().trim() || 'general'
     };
     const request$ = editing

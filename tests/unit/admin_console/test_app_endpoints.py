@@ -29,7 +29,7 @@ async def test_get_apps_returns_seeded_registry(engine):
 
 @pytest.mark.asyncio
 async def test_create_app_returns_created_row(engine):
-    request = AppCreate(pkg="com.example.newapp", name="New App", icon="star", category="tools")
+    request = AppCreate(pkg="com.example.newapp", name="New App", category="tools")
 
     result = await tasks.create_app(request)
 
@@ -39,7 +39,7 @@ async def test_create_app_returns_created_row(engine):
 
 @pytest.mark.asyncio
 async def test_create_app_rejects_duplicate_pkg(engine):
-    request = AppCreate(pkg="com.android.chrome", name="Chrome Again", icon="public", category="browser")
+    request = AppCreate(pkg="com.android.chrome", name="Chrome Again", category="browser")
 
     with pytest.raises(HTTPException) as exc_info:
         await tasks.create_app(request)
@@ -49,7 +49,7 @@ async def test_create_app_rejects_duplicate_pkg(engine):
 
 @pytest.mark.asyncio
 async def test_update_app_returns_404_for_missing_pkg(engine):
-    request = AppUpdate(name="X", icon="star", category="tools")
+    request = AppUpdate(name="X", category="tools")
 
     with pytest.raises(HTTPException) as exc_info:
         await tasks.update_app("does.not.exist", request)
@@ -59,14 +59,13 @@ async def test_update_app_returns_404_for_missing_pkg(engine):
 
 @pytest.mark.asyncio
 async def test_update_app_updates_existing_row(engine):
-    await tasks.create_app(AppCreate(pkg="com.example.newapp", name="Orig", icon="star", category="tools"))
+    await tasks.create_app(AppCreate(pkg="com.example.newapp", name="Orig", category="tools"))
 
     updated = await tasks.update_app(
-        "com.example.newapp", AppUpdate(name="Renamed", icon="explore", category="tools")
+        "com.example.newapp", AppUpdate(name="Renamed", category="tools")
     )
 
     assert updated["name"] == "Renamed"
-    assert updated["icon"] == "explore"
 
 
 @pytest.mark.asyncio
@@ -79,7 +78,7 @@ async def test_delete_app_returns_404_for_missing_pkg(engine):
 
 @pytest.mark.asyncio
 async def test_delete_app_succeeds_for_unreferenced_app(engine):
-    await tasks.create_app(AppCreate(pkg="com.example.newapp", name="New App", icon="star", category="tools"))
+    await tasks.create_app(AppCreate(pkg="com.example.newapp", name="New App", category="tools"))
 
     result = await tasks.delete_app("com.example.newapp")
 

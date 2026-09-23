@@ -133,7 +133,7 @@ def _seed_curated_preset(engine):
         "category": "monitor",
         "tag": "Chrome",
         "apps": [
-            {"name": "Chrome", "icon": "public", "pkg": "com.android.chrome", "category": "browser"}
+            {"name": "Chrome", "pkg": "com.android.chrome", "category": "browser"}
         ],
         "required_packages": ["com.android.chrome"],
         "match_mode": "all",
@@ -253,7 +253,7 @@ def test_create_app_adds_a_new_selectable_app(tmp_path):
     engine = _engine(tmp_path)
 
     created = engine.create_app(
-        {"pkg": "com.example.newapp", "name": "New App", "icon": "star", "category": "tools"}
+        {"pkg": "com.example.newapp", "name": "New App", "category": "tools"}
     )
 
     assert created["pkg"] == "com.example.newapp"
@@ -273,11 +273,11 @@ def test_create_app_adds_a_new_selectable_app(tmp_path):
 
 def test_create_app_returns_none_for_duplicate_pkg(tmp_path):
     engine = _engine(tmp_path)
-    engine.create_app({"pkg": "com.example.newapp", "name": "New App", "icon": "star", "category": "tools"})
+    engine.create_app({"pkg": "com.example.newapp", "name": "New App", "category": "tools"})
 
     assert (
         engine.create_app(
-            {"pkg": "com.example.newapp", "name": "Different", "icon": "star", "category": "tools"}
+            {"pkg": "com.example.newapp", "name": "Different", "category": "tools"}
         )
         is None
     )
@@ -286,19 +286,18 @@ def test_create_app_returns_none_for_duplicate_pkg(tmp_path):
 def test_update_app_returns_none_for_missing_pkg(tmp_path):
     engine = _engine(tmp_path)
 
-    assert engine.update_app("does.not.exist", {"name": "X", "icon": "star", "category": "tools"}) is None
+    assert engine.update_app("does.not.exist", {"name": "X", "category": "tools"}) is None
 
 
-def test_update_app_changes_name_icon_category(tmp_path):
+def test_update_app_changes_name_category(tmp_path):
     engine = _engine(tmp_path)
-    engine.create_app({"pkg": "com.example.newapp", "name": "Orig", "icon": "star", "category": "tools"})
+    engine.create_app({"pkg": "com.example.newapp", "name": "Orig", "category": "tools"})
 
     updated = engine.update_app(
-        "com.example.newapp", {"name": "Renamed", "icon": "explore", "category": "tools"}
+        "com.example.newapp", {"name": "Renamed", "category": "tools"}
     )
 
     assert updated["name"] == "Renamed"
-    assert updated["icon"] == "explore"
 
 
 def test_delete_app_succeeds_when_unreferenced(tmp_path):

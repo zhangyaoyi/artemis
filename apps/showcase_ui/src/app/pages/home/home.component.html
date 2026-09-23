@@ -2072,11 +2072,6 @@
                 <!-- Top Row: App Icon + Name + Mode Badge -->
                 <div class="card-top-row">
                   <div class="app-icons-cluster">
-                    @for (app of item.apps; track app.name) {
-                      <div class="app-icon-badge" [title]="app.name">
-                        <span class="material-symbols-outlined">{{ app.icon }}</span>
-                      </div>
-                    }
                     <span class="app-names-label">{{ getAppNamesDisplay(item.apps) }}</span>
                   </div>
 

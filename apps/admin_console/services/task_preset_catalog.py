@@ -17,7 +17,7 @@
 from typing import Any, Literal
 from pydantic import BaseModel, Field
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 import uuid
 
 try:
@@ -47,7 +47,6 @@ class AppInfo(BaseModel):
     """Application metadata."""
 
     name: str
-    icon: str
     pkg: str
     category: str = "general"
 
@@ -74,61 +73,53 @@ class TaskPreset(BaseModel):
 
 APP_REGISTRY: dict[str, dict[str, str]] = {
     # Google Suite & System
-    "com.google.android.apps.maps": {"name": "Maps", "icon": "explore", "category": "navigation"},
-    "com.google.android.gm": {"name": "Gmail", "icon": "mail", "category": "productivity"},
-    "com.android.chrome": {"name": "Chrome", "icon": "public", "category": "browser"},
+    "com.google.android.apps.maps": {"name": "Maps", "category": "navigation"},
+    "com.google.android.gm": {"name": "Gmail", "category": "productivity"},
+    "com.android.chrome": {"name": "Chrome", "category": "browser"},
     "com.google.android.youtube": {
         "name": "YouTube",
-        "icon": "smart_display",
         "category": "entertainment",
     },
-    "com.android.settings": {"name": "Settings", "icon": "settings", "category": "system"},
-    "com.google.android.deskclock": {"name": "Clock", "icon": "timer", "category": "utility"},
-    "com.android.deskclock": {"name": "Clock", "icon": "timer", "category": "utility"},
+    "com.android.settings": {"name": "Settings", "category": "system"},
+    "com.google.android.deskclock": {"name": "Clock", "category": "utility"},
+    "com.android.deskclock": {"name": "Clock", "category": "utility"},
     "com.google.android.calculator": {
         "name": "Calculator",
-        "icon": "calculate",
         "category": "utility",
     },
-    "com.android.calculator2": {"name": "Calculator", "icon": "calculate", "category": "utility"},
+    "com.android.calculator2": {"name": "Calculator", "category": "utility"},
     "com.google.android.apps.photos": {
         "name": "Photos",
-        "icon": "photo_library",
         "category": "media",
     },
     "com.google.android.calendar": {
         "name": "Calendar",
-        "icon": "calendar_month",
         "category": "productivity",
     },
     "com.google.android.keep": {
         "name": "Keep Notes",
-        "icon": "note_alt",
         "category": "productivity",
     },
-    "com.android.vending": {"name": "Play Store", "icon": "storefront", "category": "tools"},
+    "com.android.vending": {"name": "Play Store", "category": "tools"},
     "com.google.android.apps.messaging": {
         "name": "Messages",
-        "icon": "chat",
         "category": "communication",
     },
     # Popular Ecosystem Apps
-    "com.tencent.mm": {"name": "WeChat", "icon": "forum", "category": "social"},
-    "com.xingin.xhs": {"name": "Xiaohongshu", "icon": "auto_stories", "category": "social"},
-    "com.sankuai.meituan": {"name": "Meituan", "icon": "restaurant", "category": "lifestyle"},
-    "com.dianping.v1": {"name": "Dianping", "icon": "star", "category": "lifestyle"},
-    "tv.danmaku.bili": {"name": "Bilibili", "icon": "video_library", "category": "entertainment"},
+    "com.tencent.mm": {"name": "WeChat", "category": "social"},
+    "com.xingin.xhs": {"name": "Xiaohongshu", "category": "social"},
+    "com.sankuai.meituan": {"name": "Meituan", "category": "lifestyle"},
+    "com.dianping.v1": {"name": "Dianping", "category": "lifestyle"},
+    "tv.danmaku.bili": {"name": "Bilibili", "category": "entertainment"},
     "com.eg.android.AlipayGphone": {
         "name": "Alipay",
-        "icon": "account_balance_wallet",
         "category": "finance",
     },
     "com.netease.cloudmusic": {
         "name": "NetEase Music",
-        "icon": "headphones",
         "category": "entertainment",
     },
-    "com.spotify.music": {"name": "Spotify", "icon": "music_note", "category": "entertainment"},
+    "com.spotify.music": {"name": "Spotify", "category": "entertainment"},
 }
 
 
@@ -149,7 +140,6 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         apps=[
             AppInfo(
                 name="Maps",
-                icon="explore",
                 pkg="com.google.android.apps.maps",
                 category="navigation",
             )
@@ -168,13 +158,11 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         apps=[
             AppInfo(
                 name="Maps",
-                icon="explore",
                 pkg="com.google.android.apps.maps",
                 category="navigation",
             ),
             AppInfo(
                 name="Messages",
-                icon="chat",
                 pkg="com.google.android.apps.messaging",
                 category="communication",
             ),
@@ -192,9 +180,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         profile="flash",
         category="flash",
         tag="Gmail",
-        apps=[
-            AppInfo(name="Gmail", icon="mail", pkg="com.google.android.gm", category="productivity")
-        ],
+        apps=[AppInfo(name="Gmail", pkg="com.google.android.gm", category="productivity")],
         required_packages=["com.google.android.gm"],
         priority=90,
     ),
@@ -207,12 +193,9 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         category="cross_app",
         tag="Gmail + Calendar",
         apps=[
-            AppInfo(
-                name="Gmail", icon="mail", pkg="com.google.android.gm", category="productivity"
-            ),
+            AppInfo(name="Gmail", pkg="com.google.android.gm", category="productivity"),
             AppInfo(
                 name="Calendar",
-                icon="calendar_month",
                 pkg="com.google.android.calendar",
                 category="productivity",
             ),
@@ -229,7 +212,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         profile="flash",
         category="flash",
         tag="Chrome",
-        apps=[AppInfo(name="Chrome", icon="public", pkg="com.android.chrome", category="browser")],
+        apps=[AppInfo(name="Chrome", pkg="com.android.chrome", category="browser")],
         required_packages=["com.android.chrome"],
         priority=88,
     ),
@@ -242,10 +225,9 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         category="pro",
         tag="Chrome + Keep",
         apps=[
-            AppInfo(name="Chrome", icon="public", pkg="com.android.chrome", category="browser"),
+            AppInfo(name="Chrome", pkg="com.android.chrome", category="browser"),
             AppInfo(
                 name="Keep Notes",
-                icon="note_alt",
                 pkg="com.google.android.keep",
                 category="productivity",
             ),
@@ -265,7 +247,6 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         apps=[
             AppInfo(
                 name="YouTube",
-                icon="smart_display",
                 pkg="com.google.android.youtube",
                 category="entertainment",
             )
@@ -282,9 +263,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         profile="flash",
         category="flash",
         tag="Settings",
-        apps=[
-            AppInfo(name="Settings", icon="settings", pkg="com.android.settings", category="system")
-        ],
+        apps=[AppInfo(name="Settings", pkg="com.android.settings", category="system")],
         required_packages=["com.android.settings"],
         priority=87,
     ),
@@ -296,9 +275,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         profile="pro",
         category="monitor",
         tag="Settings QA",
-        apps=[
-            AppInfo(name="Settings", icon="settings", pkg="com.android.settings", category="system")
-        ],
+        apps=[AppInfo(name="Settings", pkg="com.android.settings", category="system")],
         required_packages=["com.android.settings"],
         priority=93,
     ),
@@ -311,11 +288,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         profile="flash",
         category="flash",
         tag="Clock",
-        apps=[
-            AppInfo(
-                name="Clock", icon="timer", pkg="com.google.android.deskclock", category="utility"
-            )
-        ],
+        apps=[AppInfo(name="Clock", pkg="com.google.android.deskclock", category="utility")],
         required_packages=["com.google.android.deskclock", "com.android.deskclock"],
         priority=86,
     ),
@@ -331,7 +304,6 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         apps=[
             AppInfo(
                 name="Calculator",
-                icon="calculate",
                 pkg="com.google.android.calculator",
                 category="utility",
             )
@@ -351,7 +323,6 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         apps=[
             AppInfo(
                 name="Photos",
-                icon="photo_library",
                 pkg="com.google.android.apps.photos",
                 category="media",
             )
@@ -368,7 +339,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         profile="flash",
         category="flash",
         tag="WeChat",
-        apps=[AppInfo(name="WeChat", icon="forum", pkg="com.tencent.mm", category="social")],
+        apps=[AppInfo(name="WeChat", pkg="com.tencent.mm", category="social")],
         required_packages=["com.tencent.mm"],
         priority=89,
     ),
@@ -381,10 +352,9 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         category="cross_app",
         tag="WeChat + Calendar",
         apps=[
-            AppInfo(name="WeChat", icon="forum", pkg="com.tencent.mm", category="social"),
+            AppInfo(name="WeChat", pkg="com.tencent.mm", category="social"),
             AppInfo(
                 name="Calendar",
-                icon="calendar_month",
                 pkg="com.google.android.calendar",
                 category="productivity",
             ),
@@ -401,11 +371,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         profile="flash",
         category="flash",
         tag="Xiaohongshu",
-        apps=[
-            AppInfo(
-                name="Xiaohongshu", icon="auto_stories", pkg="com.xingin.xhs", category="social"
-            )
-        ],
+        apps=[AppInfo(name="Xiaohongshu", pkg="com.xingin.xhs", category="social")],
         required_packages=["com.xingin.xhs"],
         priority=87,
     ),
@@ -418,11 +384,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         profile="flash",
         category="flash",
         tag="Meituan",
-        apps=[
-            AppInfo(
-                name="Meituan", icon="restaurant", pkg="com.sankuai.meituan", category="lifestyle"
-            )
-        ],
+        apps=[AppInfo(name="Meituan", pkg="com.sankuai.meituan", category="lifestyle")],
         required_packages=["com.sankuai.meituan", "com.dianping.v1"],
         priority=86,
     ),
@@ -438,7 +400,6 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         apps=[
             AppInfo(
                 name="Bilibili",
-                icon="video_library",
                 pkg="tv.danmaku.bili",
                 category="entertainment",
             )
@@ -455,11 +416,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
         profile="pro",
         category="pro",
         tag="Play Store",
-        apps=[
-            AppInfo(
-                name="Play Store", icon="storefront", pkg="com.android.vending", category="tools"
-            )
-        ],
+        apps=[AppInfo(name="Play Store", pkg="com.android.vending", category="tools")],
         required_packages=["com.android.vending"],
         priority=88,
     ),
@@ -472,7 +429,7 @@ PRESET_TASK_CATALOG: list[TaskPreset] = [
 
 
 def _builtin_seed_rows() -> list[dict[str, Any]]:
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     rows = []
     for task in PRESET_TASK_CATALOG:
         row = task.model_dump()
@@ -484,14 +441,13 @@ def _builtin_seed_rows() -> list[dict[str, Any]]:
 
 
 def _builtin_app_seed_rows() -> list[dict[str, Any]]:
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     rows = []
     for pkg, info in APP_REGISTRY.items():
         rows.append(
             {
                 "pkg": pkg,
                 "name": info["name"],
-                "icon": info["icon"],
                 "category": info.get("category", "general"),
                 "is_builtin": True,
                 "created_at": now,
@@ -535,7 +491,6 @@ class TaskRecommendationEngine:
         return {
             row["pkg"]: {
                 "name": row["name"],
-                "icon": row["icon"],
                 "category": row["category"],
             }
             for row in self.app_repository.list_all()
@@ -603,9 +558,7 @@ class TaskRecommendationEngine:
             row = self.app_repository.get(pkg)
             if not row:
                 raise ValueError(f"Unknown app package: {pkg}")
-            apps.append(
-                AppInfo(name=row["name"], icon=row["icon"], pkg=pkg, category=row.get("category", "general"))
-            )
+            apps.append(AppInfo(name=row["name"], pkg=pkg, category=row.get("category", "general")))
         return apps
 
     def _derive_app_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -657,7 +610,7 @@ class TaskRecommendationEngine:
     def create_task(self, payload: dict[str, Any]) -> dict[str, Any]:
         self._ensure_seeded()
         fields = self._derive_fields(payload)
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         row = {
             "id": str(uuid.uuid4()),
             **fields,
@@ -680,7 +633,7 @@ class TaskRecommendationEngine:
         # selection -- preserves the existing row's category, match_mode,
         # and priority instead of silently resetting them.
         fields = self._derive_app_fields(payload)
-        fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+        fields["updated_at"] = datetime.now(UTC).isoformat()
         return self.repository.update(preset_id, fields)
 
     def delete_task(self, preset_id: str) -> bool:
@@ -689,11 +642,10 @@ class TaskRecommendationEngine:
 
     def create_app(self, payload: dict[str, Any]) -> dict[str, Any] | None:
         self._ensure_apps_seeded()
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         row = {
             "pkg": payload["pkg"],
             "name": payload["name"],
-            "icon": payload["icon"],
             "category": payload.get("category") or "general",
             "is_builtin": False,
             "created_at": now,
@@ -705,9 +657,8 @@ class TaskRecommendationEngine:
         self._ensure_apps_seeded()
         fields = {
             "name": payload["name"],
-            "icon": payload["icon"],
             "category": payload.get("category") or "general",
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
         return self.app_repository.update(pkg, fields)
 
@@ -719,9 +670,7 @@ class TaskRecommendationEngine:
         pkg in their required_packages.
         """
         self._ensure_seeded()
-        referencing = [
-            row for row in self.repository.list_all() if pkg in row["required_packages"]
-        ]
+        referencing = [row for row in self.repository.list_all() if pkg in row["required_packages"]]
         if referencing:
             return False, len(referencing)
         return self.app_repository.delete(pkg), 0

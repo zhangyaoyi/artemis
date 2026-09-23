@@ -114,7 +114,7 @@ async def create_app(request: AppCreate):
 
 @router.put("/api/apps/{pkg}")
 async def update_app(pkg: str, request: AppUpdate):
-    """Update an existing app's name/icon/category."""
+    """Update an existing app's name/category."""
     updated = task_recommendation_engine.update_app(pkg, request.model_dump())
     if updated is None:
         raise HTTPException(status_code=404, detail=f"App '{pkg}' not found.")

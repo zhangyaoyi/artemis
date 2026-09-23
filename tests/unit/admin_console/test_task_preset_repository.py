@@ -13,7 +13,7 @@ def _row(id_suffix="1", **overrides):
         "category": "flash",
         "tag": "Test App",
         "apps": [
-            {"name": "Test App", "icon": "star", "pkg": "com.test.app", "category": "tools"}
+            {"name": "Test App", "pkg": "com.test.app", "category": "tools"}
         ],
         "required_packages": ["com.test.app"],
         "match_mode": "any",
@@ -35,7 +35,7 @@ def test_create_and_list_round_trips_json_fields(tmp_path):
     rows = repo.list_all()
     assert len(rows) == 1
     assert rows[0]["apps"] == [
-        {"name": "Test App", "icon": "star", "pkg": "com.test.app", "category": "tools"}
+        {"name": "Test App", "pkg": "com.test.app", "category": "tools"}
     ]
     assert rows[0]["required_packages"] == ["com.test.app"]
     assert rows[0]["is_builtin"] is False
@@ -92,5 +92,5 @@ def test_get_returns_existing_row(tmp_path):
 
     assert row["title"] == "Test Task"
     assert row["apps"] == [
-        {"name": "Test App", "icon": "star", "pkg": "com.test.app", "category": "tools"}
+        {"name": "Test App", "pkg": "com.test.app", "category": "tools"}
     ]

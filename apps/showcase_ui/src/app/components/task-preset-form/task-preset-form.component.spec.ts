@@ -13,7 +13,6 @@ describe('TaskPresetFormComponent', () => {
   const rawApp = (overrides: Record<string, unknown> = {}) => ({
     pkg: 'com.android.chrome',
     name: 'Chrome',
-    icon: 'public',
     category: 'browser',
     is_builtin: true,
     ...overrides
@@ -49,7 +48,7 @@ describe('TaskPresetFormComponent', () => {
       profile: 'flash',
       category: 'flash',
       tag: 'Maps',
-      apps: [{ name: 'Maps', icon: 'explore', pkg: 'com.google.android.apps.maps' }],
+      apps: [{ name: 'Maps', pkg: 'com.google.android.apps.maps' }],
       requiredPackages: ['com.google.android.apps.maps']
     };
     component.editingTask = task;
@@ -115,7 +114,7 @@ describe('TaskPresetFormComponent', () => {
   });
 
   it('opens the edit-app form pre-filled and does not require re-entering pkg', () => {
-    const app: AppReference = { name: 'Chrome', icon: 'public', pkg: 'com.android.chrome', category: 'browser' };
+    const app: AppReference = { name: 'Chrome', pkg: 'com.android.chrome', category: 'browser' };
 
     component.openEditAppForm(app, new Event('click'));
 
@@ -128,14 +127,13 @@ describe('TaskPresetFormComponent', () => {
     component.openAddAppForm();
     component.appFormPkg.set('com.example.newapp');
     component.appFormName.set('New App');
-    component.appFormIcon.set('star');
 
     component.saveApp();
 
     const req = http.expectOne('/api/apps');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ pkg: 'com.example.newapp', name: 'New App', icon: 'star', category: 'general' });
-    req.flush(rawApp({ pkg: 'com.example.newapp', name: 'New App', icon: 'star', category: 'general' }));
+    expect(req.request.body).toEqual({ pkg: 'com.example.newapp', name: 'New App', category: 'general' });
+    req.flush(rawApp({ pkg: 'com.example.newapp', name: 'New App', category: 'general' }));
 
     const refreshReq = http.expectOne('/api/apps');
     refreshReq.flush([rawApp(), rawApp({ pkg: 'com.example.newapp', name: 'New App' })]);
@@ -158,7 +156,7 @@ describe('TaskPresetFormComponent', () => {
   });
 
   it('deletes an app and shows an inline error when blocked by a referencing preset', () => {
-    const app: AppReference = { name: 'Chrome', icon: 'public', pkg: 'com.android.chrome', category: 'browser' };
+    const app: AppReference = { name: 'Chrome', pkg: 'com.android.chrome', category: 'browser' };
 
     component.deleteApp(app, new Event('click'));
 
