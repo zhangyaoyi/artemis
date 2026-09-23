@@ -178,6 +178,38 @@ def test_llm_config_parsing_and_merging():
     assert merged.planner.temperature == 0.7
 
 
+def test_llm_config_api_base_threads_to_resolved_endpoint():
+    """A per-node api_base in config must reach the ModelEndpoint the router sees."""
+    from artemis.config.llm import LLMConfig
+    from artemis.context import ArtemisContext, DeviceContext, DevicePlatform
+    from artemis.services.llm import _resolve_endpoint
+
+    llm_cfg = get_default_llm_config()
+    overrides = {
+        "planner": {
+            "provider": "openai",
+            "model": "gpt-4o",
+            "api_base": "https://api.deepseek.com/v1",
+            "fallback": {"provider": "openai", "model": "gpt-4o-mini"},
+        }
+    }
+    merged: LLMConfig = deep_merge_llm_config(llm_cfg, overrides)
+    assert merged.planner.api_base == "https://api.deepseek.com/v1"
+
+    device = DeviceContext(
+        host_platform="LINUX",
+        mobile_platform=DevicePlatform.ANDROID,
+        device_id="dummy",
+        device_width=1080,
+        device_height=2400,
+    )
+    ctx = ArtemisContext(device=device)
+    ctx.llm_config = merged
+
+    endpoint = _resolve_endpoint(ctx, "planner")
+    assert endpoint.api_base == "https://api.deepseek.com/v1"
+
+
 def test_agent_config_loading():
     """Test AgentGlobalConfig parsing from agent_config.json / artemis.jsonc."""
     agent_cfg = load_agent_config()

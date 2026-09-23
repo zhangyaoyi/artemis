@@ -80,6 +80,7 @@ class LLM(BaseModel):
     reasoning_effort: Literal["none", "low", "medium", "high"] | None = None
     include_thoughts: bool | None = None
     enable_grounding: bool | None = None
+    api_base: str | None = None
 
     def validate_provider(self, name: str) -> None:
         """Ensure the required API key or credentials exist in settings for this provider."""
