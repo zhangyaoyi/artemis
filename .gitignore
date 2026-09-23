@@ -29,6 +29,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+config/
 
 # Testing & Coverage
 .pytest_cache/

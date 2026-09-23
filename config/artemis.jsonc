@@ -7,11 +7,13 @@
   // 1. Global Default Model (Applied to all sub-agents unless overridden below)
   // ------------------------------------------------------------------------------
   "default": {
-    "provider": "custom",
+    "provider": "openai",
     "model": "qwen3.8",
+    "api_base": "http://localhost:8000/v1",
     "fallback": {
-      "provider": "custom",
-      "model": "qwen3.8"
+      "provider": "openai",
+      "model": "qwen3.8",
+      "api_base": "http://localhost:8000/v1"
     }
   },
 
