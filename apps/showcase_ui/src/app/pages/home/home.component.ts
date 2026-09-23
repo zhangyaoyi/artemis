@@ -122,8 +122,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   public activeAdbGuideTab = signal<AdbGuideTab>('emulator');
   public emulatorSetupMode = signal<'studio' | 'cli'>('studio');
 
-  // Interactive guide tab for LLM / OCR credentials: 'gemini' | 'ocr'
-  public modelSetupMode = signal<'gemini' | 'custom'>('gemini');
+  // Interactive guide tab for LLM / OCR credentials: 'gemini' | 'openai' | 'anthropic'
+  public modelSetupMode = signal<'gemini' | 'openai' | 'anthropic'>('gemini');
+  public showAdvancedInspector = signal<boolean>(false);
   public showOcrConfig = signal<boolean>(false);
   public showFullConfigFile = signal<boolean>(false);
 
@@ -138,6 +139,28 @@ export class HomeComponent implements OnInit, OnDestroy {
   public geminiSaveMessage = signal<string | null>(null);
   public geminiSaveError = signal<string | null>(null);
   public isGeminiKeyEdited = signal<boolean>(false);
+
+  // OpenAI-compatible Setup State
+  public openaiBaseUrlInput = signal<string>('');
+  public openaiModelInput = signal<string>('');
+  public openaiKeyInput = signal<string>('');
+  public showOpenaiKey = signal<boolean>(false);
+  public isSavingOpenaiConfig = signal<boolean>(false);
+  public isTestingOpenaiConfig = signal<boolean>(false);
+  public openaiSaveMessage = signal<string | null>(null);
+  public openaiSaveError = signal<string | null>(null);
+  public isOpenaiKeyEdited = signal<boolean>(false);
+
+  // Anthropic-compatible Setup State
+  public anthropicBaseUrlInput = signal<string>('');
+  public anthropicModelInput = signal<string>('');
+  public anthropicKeyInput = signal<string>('');
+  public showAnthropicKey = signal<boolean>(false);
+  public isSavingAnthropicConfig = signal<boolean>(false);
+  public isTestingAnthropicConfig = signal<boolean>(false);
+  public anthropicSaveMessage = signal<string | null>(null);
+  public anthropicSaveError = signal<string | null>(null);
+  public isAnthropicKeyEdited = signal<boolean>(false);
 
   // Vision OCR API Key State
   public ocrKeyInput = signal<string>('');
@@ -480,6 +503,16 @@ export class HomeComponent implements OnInit, OnDestroy {
     return this.geminiKeyInput().trim() !== this.savedGeminiKey().trim();
   });
 
+  public savedOpenaiKey = computed<string>(() => this.apiKeysMap()['openai'] || '');
+  public isOpenaiKeyModified = computed<boolean>(() =>
+    this.openaiKeyInput().trim() !== this.savedOpenaiKey().trim()
+  );
+
+  public savedAnthropicKey = computed<string>(() => this.apiKeysMap()['anthropic'] || '');
+  public isAnthropicKeyModified = computed<boolean>(() =>
+    this.anthropicKeyInput().trim() !== this.savedAnthropicKey().trim()
+  );
+
   public savedOcrKey = computed<string>(() => {
     const keys = this.apiKeysMap();
     return keys['ocr'] || '';
@@ -595,11 +628,38 @@ export class HomeComponent implements OnInit, OnDestroy {
       const current = this.systemService.currentApiKey();
       const googleKey = keys['google'] || current || '';
       const ocrKey = keys['ocr'] || '';
+      const openaiKey = keys['openai'] || '';
+      const anthropicKey = keys['anthropic'] || '';
       if (!this.isGeminiKeyEdited()) {
         this.geminiKeyInput.set(googleKey);
       }
       if (!this.isOcrKeyEdited()) {
         this.ocrKeyInput.set(ocrKey);
+      }
+      if (!this.isOpenaiKeyEdited()) {
+        this.openaiKeyInput.set(openaiKey);
+      }
+      if (!this.isAnthropicKeyEdited()) {
+        this.anthropicKeyInput.set(anthropicKey);
+      }
+    });
+
+    effect(() => {
+      const cfg = this.modelConfigEnv();
+      if (!cfg) return;
+      const provider = (cfg.default_model?.provider || '').toLowerCase();
+      const model = cfg.default_model?.model || '';
+      const apiBase = cfg.default_model?.api_base || '';
+      // openrouter/xai/ollama/vllm/custom all share the OpenAI-compatible
+      // ChatOpenAI dispatch branch in artemis/llm/router.py, so they all
+      // land on the "OpenAI 兼容" card too.
+      const openaiLikeProviders = ['openai', 'openrouter', 'xai', 'ollama', 'vllm', 'custom'];
+      if (provider === 'anthropic') {
+        this.anthropicModelInput.set(model);
+        this.anthropicBaseUrlInput.set(apiBase);
+      } else if (openaiLikeProviders.includes(provider)) {
+        this.openaiModelInput.set(model);
+        this.openaiBaseUrlInput.set(apiBase);
       }
     });
   }
@@ -621,9 +681,15 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.systemService.fetchModelConfigEnv().subscribe({
       next: cfg => {
         // Preselect the setup mode that matches the configured default provider.
-        const provider = cfg.default_model?.provider;
-        if (provider && provider !== 'google') {
-          this.setModelSetupMode('custom');
+        // openrouter/xai/ollama/vllm/custom all share the OpenAI-compatible
+        // ChatOpenAI dispatch branch in artemis/llm/router.py, so they all
+        // land on the "OpenAI 兼容" card too.
+        const provider = (cfg.default_model?.provider || '').toLowerCase();
+        const openaiLikeProviders = ['openai', 'openrouter', 'xai', 'ollama', 'vllm', 'custom'];
+        if (provider === 'anthropic') {
+          this.setModelSetupMode('anthropic');
+        } else if (openaiLikeProviders.includes(provider)) {
+          this.setModelSetupMode('openai');
         }
       },
       error: () => {}
@@ -668,13 +734,18 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.emulatorSetupMode.set(mode);
   }
 
-  public setModelSetupMode(mode: 'gemini' | 'custom'): void {
+  public setModelSetupMode(mode: 'gemini' | 'openai' | 'anthropic'): void {
     this.modelSetupMode.set(mode);
-    if (mode === 'custom') {
+  }
+
+  public toggleAdvancedInspector(): void {
+    this.showAdvancedInspector.update(v => !v);
+    if (this.showAdvancedInspector()) {
+      // Expanding the advanced panel means the user intends to manage
+      // config/credentials by hand; don't block the launcher on the
+      // automated credentials probe while they do that.
       this.systemService.setSkipCredentialsCheck(true);
       this.systemService.fetchModelConfigEnv().subscribe();
-    } else {
-      this.systemService.setSkipCredentialsCheck(false);
     }
   }
 
@@ -822,6 +893,158 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.geminiSaveError.set(err?.error?.detail || err?.message || 'Gemini API key test failed.');
       }
     });
+  }
+
+  public onOpenaiConfigChange(): void {
+    this.isOpenaiKeyEdited.set(true);
+    this.openaiSaveError.set(null);
+    this.openaiSaveMessage.set(null);
+  }
+
+  public saveOpenaiConfig(): void {
+    const model = this.openaiModelInput().trim();
+    if (!model) {
+      this.openaiSaveError.set('Model name is required.');
+      return;
+    }
+    this.isSavingOpenaiConfig.set(true);
+    this.openaiSaveError.set(null);
+    this.openaiSaveMessage.set(null);
+
+    const key = this.openaiKeyInput().trim();
+    const baseUrl = this.openaiBaseUrlInput().trim() || null;
+
+    const saveKey$ = key
+      ? this.systemService.updateApiKey('openai', key, true)
+      : null;
+
+    const afterKey = () => {
+      this.systemService.saveDefaultModel('openai', model, baseUrl).subscribe({
+        next: (res) => {
+          this.isSavingOpenaiConfig.set(false);
+          this.isOpenaiKeyEdited.set(false);
+          this.openaiSaveMessage.set(res?.message || '✓ OpenAI-compatible config saved.');
+          setTimeout(() => this.openaiSaveMessage.set(null), 5000);
+        },
+        error: (err) => {
+          this.isSavingOpenaiConfig.set(false);
+          this.openaiSaveError.set(err?.error?.detail || err?.message || 'Failed to save default model.');
+        }
+      });
+    };
+
+    if (saveKey$) {
+      saveKey$.subscribe({ next: afterKey, error: (err) => {
+        this.isSavingOpenaiConfig.set(false);
+        this.openaiSaveError.set(err?.error?.detail || err?.message || 'Failed to update OpenAI API key.');
+      }});
+    } else {
+      afterKey();
+    }
+  }
+
+  public testOpenaiConfig(): void {
+    const key = this.openaiKeyInput().trim();
+    if (!key) return;
+    this.isTestingOpenaiConfig.set(true);
+    this.openaiSaveError.set(null);
+    this.openaiSaveMessage.set(null);
+
+    this.systemService.testApiKey('openai', key, this.openaiBaseUrlInput().trim() || undefined).subscribe({
+      next: (res) => {
+        this.isTestingOpenaiConfig.set(false);
+        if (res?.valid) {
+          this.openaiSaveMessage.set(res?.message || '✓ OpenAI-compatible endpoint is valid!');
+        } else {
+          this.openaiSaveError.set(res?.message || 'Endpoint verification failed.');
+        }
+        setTimeout(() => this.openaiSaveMessage.set(null), 5000);
+      },
+      error: (err) => {
+        this.isTestingOpenaiConfig.set(false);
+        this.openaiSaveError.set(err?.error?.detail || err?.message || 'Endpoint test failed.');
+      }
+    });
+  }
+
+  public onAnthropicConfigChange(): void {
+    this.isAnthropicKeyEdited.set(true);
+    this.anthropicSaveError.set(null);
+    this.anthropicSaveMessage.set(null);
+  }
+
+  public saveAnthropicConfig(): void {
+    const model = this.anthropicModelInput().trim();
+    if (!model) {
+      this.anthropicSaveError.set('Model name is required.');
+      return;
+    }
+    this.isSavingAnthropicConfig.set(true);
+    this.anthropicSaveError.set(null);
+    this.anthropicSaveMessage.set(null);
+
+    const key = this.anthropicKeyInput().trim();
+    const baseUrl = this.anthropicBaseUrlInput().trim() || null;
+
+    const saveKey$ = key
+      ? this.systemService.updateApiKey('anthropic', key, true)
+      : null;
+
+    const afterKey = () => {
+      this.systemService.saveDefaultModel('anthropic', model, baseUrl).subscribe({
+        next: (res) => {
+          this.isSavingAnthropicConfig.set(false);
+          this.isAnthropicKeyEdited.set(false);
+          this.anthropicSaveMessage.set(res?.message || '✓ Anthropic-compatible config saved.');
+          setTimeout(() => this.anthropicSaveMessage.set(null), 5000);
+        },
+        error: (err) => {
+          this.isSavingAnthropicConfig.set(false);
+          this.anthropicSaveError.set(err?.error?.detail || err?.message || 'Failed to save default model.');
+        }
+      });
+    };
+
+    if (saveKey$) {
+      saveKey$.subscribe({ next: afterKey, error: (err) => {
+        this.isSavingAnthropicConfig.set(false);
+        this.anthropicSaveError.set(err?.error?.detail || err?.message || 'Failed to update Anthropic API key.');
+      }});
+    } else {
+      afterKey();
+    }
+  }
+
+  public testAnthropicConfig(): void {
+    const key = this.anthropicKeyInput().trim();
+    if (!key) return;
+    this.isTestingAnthropicConfig.set(true);
+    this.anthropicSaveError.set(null);
+    this.anthropicSaveMessage.set(null);
+
+    this.systemService.testApiKey('anthropic', key, this.anthropicBaseUrlInput().trim() || undefined).subscribe({
+      next: (res) => {
+        this.isTestingAnthropicConfig.set(false);
+        if (res?.valid) {
+          this.anthropicSaveMessage.set(res?.message || '✓ Anthropic-compatible endpoint is valid!');
+        } else {
+          this.anthropicSaveError.set(res?.message || 'Endpoint verification failed.');
+        }
+        setTimeout(() => this.anthropicSaveMessage.set(null), 5000);
+      },
+      error: (err) => {
+        this.isTestingAnthropicConfig.set(false);
+        this.anthropicSaveError.set(err?.error?.detail || err?.message || 'Endpoint test failed.');
+      }
+    });
+  }
+
+  public toggleOpenaiKeyVisibility(): void {
+    this.showOpenaiKey.update(v => !v);
+  }
+
+  public toggleAnthropicKeyVisibility(): void {
+    this.showAnthropicKey.update(v => !v);
   }
 
   public testOcrKey(): void {
