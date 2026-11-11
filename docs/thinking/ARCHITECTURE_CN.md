@@ -1,7 +1,7 @@
 # ARTEMIS 架构设计
 
 > 基于 2026-11 代码库(main @ 371aa6d)的架构分析。ARTEMIS 是一个让 AI 助手 / 测试套件"像人一样操作 Android 真机"的智能体自动化平台(基于 [minitap/mobile-use](https://github.com/minitap-ai/mobile-use) 演进)。
-> 官方架构示意图见 [`docs/assets/artemis_architecture_diagram.png`](assets/artemis_architecture_diagram.png)。
+> 官方架构示意图见 [`docs/assets/artemis_architecture_diagram.png`](../assets/artemis_architecture_diagram.png)。
 
 整体是清晰的**分层单体 + 多进程运行时**结构,自上而下分六层:
 
@@ -88,6 +88,26 @@ planner → convergence → perception → operator → execution_check
 - **配置三层**:`config/artemis.jsonc`(agent 行为,如 `pro.explorer.mode` / `flash.explorer_mode`)、`artemis/config/`(Pydantic settings)、`.env`(环境变量,如 `ARTEMIS_HIERARCHY_BACKEND`、`ARTEMIS_HELPER_AUTO_INSTALL`)。
 - **部署**:`Dockerfile` + `start.sh` / `start.bat` 一键装机(自动装 ADB/scrcpy/FFmpeg/uv 并把 MCP 与 rules 挂载到各家 IDE);`playground/` 是容器化演示栈(artemis_container + nginx_container + backend_manager)。
 - **质量体系**:`tests/`(unit / integration / e2e / fixtures)、`make test`(确定性主套件,CI 用)、`.quality-baseline.json` 质量棘轮、pre-commit、`pyright-core.json`(核心模块严格类型检查)。
+
+## 核心模块定位
+
+**核心是编排层 + Operator 智能体,即 `artemis/graph/` + `artemis/agents/operator/`。**
+
+| 文件 | 行数 | 角色 |
+|---|---|---|
+| `artemis/graph/graph.py` | 1076 | Pro 状态图的循环装配:planner→perception→operator→execution_check→validator→summarizer→convergence |
+| `artemis/graph/checkpoints.py` | 1243 | 检查点/账本:里程碑 verify/assert 的产生、收割、终审结算 |
+| `artemis/agents/operator/operator.py` | 1398 | 全库最大的单一智能体,所有工具都汇聚到它,真正"干活"的枢纽 |
+| `artemis/agents/operator/prompts.py` | 1064 | Operator 的行为契约(执行前决策、事故恢复、回合终止) |
+| `artemis/context.py` | 365 | `ArtemisContext`,被全库 61 处引用,贯穿所有层的运行态载体 |
+
+判定依据:
+
+1. **唯一内核**:CLI、Web 控制台、MCP、SDK 四种入口最终全部收敛到同一张图(Pro)或同一个 runner(Flash)。接入层只是协议适配;换掉这张图什么都不是。
+2. **差异化价值**:AndroidWorld 99% 的成绩靠的不是模型,而是图里的可靠性机制——Validator 执行前安全网、Checker 检查点终审、execution incident 持续留在 Operator 上下文直到恢复。
+3. **复杂度分布**:Explorer、Diagnoser、视频分析等"专家"都是被 Operator 当工具调用的从属,控制流重心在 Operator 一侧。
+
+**第二核心是 `artemis/memory/` + `artemis/data_engine/`(压缩历史账本,被 63 处引用)**——它决定了长程任务能跑多长、Flash 为什么可以不限步数。设备执行层(`drivers/` / `controllers/`)虽必不可少,但只是可替换的手脚,不含项目的核心判断。
 
 ## 设计哲学(一句话)
 
